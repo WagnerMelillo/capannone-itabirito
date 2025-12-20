@@ -1,8 +1,8 @@
 const CONFIG = {
   menuUrl: "https://linktr.ee/PizzariaCapannone",
   promosUrl: "#campanhas",
-  instagramUrl: "#", // opcional: coloque aqui o link do Instagram
-  rentCalcUrl: "#",  // opcional: coloque aqui o link do cálculo da locação
+  instagramUrl: "https://www.instagram.com/capannoneitabirito/",
+  rentCalcUrl: "https://reservas.dasmmelhores.com/",
   whatsappOrderPhone: "31983284984",
   whatsappRentPhone: "31989360951",
   ssidName: "Guest/Hotspot"
