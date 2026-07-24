@@ -1,237 +1,321 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>Capannone Itabirito</title>
-  <meta name="description" content="Capannone Itabirito — pizza, experiências e novidades. Cardápio, campanhas e acesso Wi‑Fi."/>
-  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="css/style.css"/>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#173d2d">
+<meta name="description" content="Pizzaria Capannone em Itabirito-MG. Massa fininha, pizzas artesanais, salão acolhedor e delivery todos os dias, das 18h às 23h.">
+<link rel="canonical" href="https://capannone-itabirito.pages.dev/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="pt_BR">
+<meta property="og:title" content="Capannone | Pizza artesanal em Itabirito">
+<meta property="og:description" content="Massa fininha. Sabor sem igual. Todos os dias, das 18h às 23h.">
+<meta property="og:url" content="https://capannone-itabirito.pages.dev/">
+<meta property="og:image" content="https://capannone-itabirito.pages.dev/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<title>Capannone | Pizzaria artesanal em Itabirito-MG</title>
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="css/site.css">
+<link rel="stylesheet" href="css/overrides.css">
 </head>
 <body>
-<header>
-  <div class="container">
-    <div class="nav">
-      <div class="brand">
-        <picture>
-          <source srcset="assets/brand/logo.webp" type="image/webp">
-          <img src="assets/brand/logo.jpg" alt="Capannone">
-        </picture>
-        <div class="title">
-          <strong>Capannone Itabirito</strong>
-          <span>Pizzaria • Espaço • Eventos</span>
-        </div>
-      </div>
+<a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
 
-      <nav>
-        <ul>
-          <li><a href="#historia">História</a></li>
-          <li><a href="#cardapio">Cardápio</a></li>
-          <li><a href="#wifi">Wi‑Fi</a></li>
-          <li><a href="#locacao">Locação</a></li>
-          <li><a href="#campanhas">Campanhas</a></li>
-        </ul>
-      </nav>
+<div class="topline">
+  <span>Aberto todos os dias</span><strong>18h às 23h</strong>
+  <a href="https://wa.me/5531983284984?text=Ol%C3%A1%21%20Quero%20fazer%20um%20pedido%20na%20Capannone.">Pedidos: (31) 98328-4984</a>
+</div>
 
-      <div class="nav-cta">
-        <a class="btn small primary" data-menu href="#" aria-label="Abrir cardápio">Abrir Cardápio</a>
-        <a class="btn small" data-whatsapp-order href="#" target="_blank" rel="noreferrer">Pedidos WhatsApp</a>
+<header class="site-header">
+  <div class="wrap nav-wrap">
+    <a class="brand" href="#inicio">
+      <picture>
+        <source srcset="assets/brand/logo.webp" type="image/webp">
+        <img src="assets/brand/logo.jpg" alt="Capannone Casa das Massas">
+      </picture>
+      <span>Itabirito · MG</span>
+    </a>
+    <nav class="desktop-nav" aria-label="Navegação principal">
+      <a href="#casa">A casa</a>
+      <a href="#cardapio">Cardápio</a>
+      <a href="#pedidos">Como pedir</a>
+      <a href="#espaco">Eventos</a>
+      <a href="#localizacao">Localização</a>
+    </nav>
+    <a class="button button-order button-small" href="https://wa.me/5531983284984?text=Ol%C3%A1%21%20Quero%20fazer%20um%20pedido%20na%20Capannone.">Pedir agora ↗</a>
+    <details class="mobile-menu">
+      <summary>Menu</summary>
+      <div>
+        <a href="#casa">A casa</a>
+        <a href="#cardapio">Cardápio</a>
+        <a href="#pedidos">Como pedir</a>
+        <a href="#espaco">Eventos</a>
+        <a href="#localizacao">Localização</a>
       </div>
-    </div>
+    </details>
   </div>
 </header>
-<section class="wifi-top-callout" aria-label="Acesso Wi-Fi">
-  <div class="wifi-top-inner">
-    <div class="wifi-top-text">
-      <h2>LIBERAR WI-FI</h2>
-      <p>
-        Conecte no Wi-Fi <strong>Capannone Hotspot</strong>.
-        Se o portal não abrir sozinho, toque no botão abaixo.
-      </p>
-    </div>
 
-    <div class="wifi-top-actions">
-      <a class="btn btn-primary" href="/portal.html">ABRIR PORTAL DO WI-FI</a>
-      <a class="btn btn-ghost" href="https://linktr.ee/PizzariaCapannone" target="_blank" rel="noopener">ABRIR CARDÁPIO</a>
-    </div>
-  </div>
-</section>
-
-<main>
-  <div class="hero">
-    <div class="container">
-      <div class="hero-grid">
-        <div class="card hero-card">
-          <div class="bg" style="background-image:url('assets/img/p6_img1.webp')"></div>
-          <div class="overlay"></div>
-          <div class="content">
-            <div class="pill">🇮🇹 Tradição • forno • qualidade</div>
-            <h1 class="h1">CAPANNONE ITABIRITO.</h1>
-            <p class="lead">Um espaço para comer bem, encontrar gente e criar memórias. Acompanhe o cardápio e as campanhas do dia.</p>
-            <div class="hero-actions">
-              <button class="btn primary" data-open-menu>VER CARDÁPIO</button>
-              <a class="btn" data-promos href="#">PROMOÇÕES DE HOJE</a>
-              <a class="btn" data-insta href="#" target="_blank" rel="noreferrer">INSTAGRAM</a>
-            </div>
-            <div class="hero-badges">
-              <div class="pill">📍 Itabirito • MG</div>
-              <div class="pill">🛜 Wi‑Fi no local</div>
-              <div class="pill">🎉 Eventos e locação</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card side-card">
-          <h2>Hoje na Capannone</h2>
-          <p>Confira campanhas, eventos e novidades (atualizadas pela administração).</p>
-          <div class="divider"></div>
-          <div class="kv">
-            <div class="row"><span>Cardápio</span><strong>Link oficial</strong></div>
-            <div class="row"><span>Wi‑Fi</span><strong>SSID: <span data-ssid>Capannone Hotspot</span></strong></div>
-            <div class="row"><span>Orçamentos</span><strong>WhatsApp</strong></div>
-          </div>
-          <div class="divider"></div>
-</div>
+<main id="conteudo">
+  <section class="hero" id="inicio">
+    <img class="hero-photo" src="assets/img/p1_img2.jpg" alt="Pizza artesanal Capannone com tomates e manjericão">
+    <div class="hero-shade"></div>
+    <div class="wrap hero-content">
+      <p class="eyebrow">PIZZARIA ARTESANAL · ITABIRITO</p>
+      <h1>A noite fica <em>melhor</em> com pizza de verdade.</h1>
+      <p class="hero-copy">Massa fininha, ingredientes caprichados e aquele clima gostoso para reunir quem você gosta.</p>
+      <div class="hero-actions">
+        <a class="button button-order" href="https://wa.me/5531983284984?text=Ol%C3%A1%21%20Quero%20fazer%20um%20pedido%20na%20Capannone.">Pedir no WhatsApp ↗</a>
+        <a class="button button-ghost" href="#cardapio">Ver cardápio ↓</a>
+      </div>
+      <div class="hero-details">
+        <span><b>Todos os dias</b> · 18h às 23h</span>
+        <span><b>Rua Turmalina, 153</b> · Santa Tereza</span>
       </div>
     </div>
-  </div>
+  </section>
 
-  <section id="historia">
-    <div class="container">
-      <div class="section-title">
-        <h2>Breve história</h2>
-        
+  <section class="quick-bar">
+    <div class="wrap quick-grid">
+      <a href="https://aiqfome.com/MG/itabirito/capannone">
+        <span class="quick-icon">✦</span>
+        <span><strong>Delivery pelo Aiqfome</strong><small>Pagamento online e cupons</small></span>
+        <b>↗</b>
+      </a>
+      <a href="portal.html">
+        <span class="quick-icon">⌁</span>
+        <span><strong>Wi-Fi do cliente</strong><small>Capannone Hotspot</small></span>
+        <b>↗</b>
+      </a>
+      <a href="https://wa.me/5531989360951?text=Ol%C3%A1%21%20Quero%20saber%20sobre%20a%20loca%C3%A7%C3%A3o%20do%20espa%C3%A7o%20Capannone.">
+        <span class="quick-icon">✦</span>
+        <span><strong>Festas e eventos</strong><small>Peça sua estimativa</small></span>
+        <b>↗</b>
+      </a>
+    </div>
+  </section>
+
+  <section class="section" id="casa">
+    <div class="wrap split-story">
+      <div class="photo-card photo-tall">
+        <img src="assets/img/p3_img1.jpg" alt="Pizza Capannone recém-preparada">
       </div>
-      <div class="grid">
-        <div class="card box col-8">
-          <h3>Quem somos</h3>
-          
-          <div id="historyContent">
-            <p>
-              A Capannone nasceu para reunir pessoas em volta de uma boa pizza — com carinho, ingredientes de qualidade e um clima acolhedor.
-              <br/><br/>
-              <em>Em breve, contamos aqui a nossa história completa.</em>
-            </p>
-          </div>
-
+      <div class="story-copy">
+        <p class="eyebrow">A CAPANNONE</p>
+        <h2>Uma mesa pronta para receber você.</h2>
+        <div id="story-content">
+          <p>Na Capannone, cada pizza é feita para transformar uma noite comum num encontro que dá vontade de repetir. Nossa massa fininha recebe ingredientes de qualidade e sai quentinha, no ponto para compartilhar.</p>
+          <p>É pizza italiana com o tempero acolhedor de Itabirito: um salão de portas abertas, bons sabores e espaço para celebrar.</p>
         </div>
-        <div class="card col-4" style="overflow:hidden">
-          <picture>
-            <source srcset="assets/img/p1_img2.webp" type="image/webp">
-            <img src="assets/img/p1_img2.jpg" alt="Capannone" style="width:100%;height:100%;object-fit:cover;display:block">
-          </picture>
+        <div class="story-stats">
+          <div><strong>7,2 mil+</strong><span>pessoas acompanhando no Instagram</span></div>
+          <div><strong>4,7/5</strong><span>nota no Aiqfome</span></div>
+          <div><strong>Todos os dias</strong><span>das 18h às 23h</span></div>
+        </div>
+        <a class="text-link" href="https://www.instagram.com/capannoneitabirito/">Conheça nosso Instagram <span>↗</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section menu-section" id="cardapio">
+    <div class="wrap">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">CARDÁPIO</p>
+          <h2>Escolha seu sabor favorito.</h2>
+        </div>
+        <p>Sabores e preços atualizados do nosso delivery. As pizzas são feitas nos tamanhos Média, Grande e Gigante.</p>
+      </div>
+      <div class="menu-tabs" role="tablist" aria-label="Categorias do cardápio">
+        <button type="button" class="active" data-menu-tab="pizzas" aria-selected="true">Pizzas</button>
+        <button type="button" data-menu-tab="cervejas" aria-selected="false">Cervejas</button>
+        <button type="button" data-menu-tab="refrigerantes" aria-selected="false">Refrigerantes</button>
+        <button type="button" data-menu-tab="sucos" aria-selected="false">Sucos</button>
+        <button type="button" data-menu-tab="promocoes" aria-selected="false">Promoções</button>
+      </div>
+      <div id="menu-content"></div>
+      <div class="menu-cta">
+        <div>
+          <strong>Já escolheu?</strong>
+          <span>Envie seu pedido direto para a nossa equipe.</span>
+        </div>
+        <a class="button button-light" href="https://wa.me/5531983284984?text=Ol%C3%A1%21%20Quero%20fazer%20um%20pedido%20na%20Capannone.">Pedir no WhatsApp ↗</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section order-section" id="pedidos">
+    <div class="wrap">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow light">COMO PEDIR</p>
+          <h2>Do seu jeito, sem complicação.</h2>
+        </div>
+        <p>Escolha o canal que mais combina com a sua noite.</p>
+      </div>
+      <div class="order-grid">
+        <div class="order-card whatsapp-card">
+          <span class="card-kicker">ATENDIMENTO DIRETO</span>
+          <h3>Peça pelo <em>WhatsApp</em></h3>
+          <p>Fale com a nossa equipe para pedir pizza, tirar dúvidas ou combinar a retirada.</p>
+          <a class="button button-dark" href="https://wa.me/5531983284984?text=Ol%C3%A1%21%20Quero%20fazer%20um%20pedido%20na%20Capannone.">Chamar no WhatsApp ↗</a>
+          <small>(31) 98328-4984 · pedidos</small>
+        </div>
+        <div class="order-card aiq-card">
+          <span class="card-kicker">DELIVERY ONLINE</span>
+          <h3>Peça pelo <em>Aiqfome</em></h3>
+          <p>Delivery com pagamento online, cupons e avaliação 4,7 de 5 pelos clientes.</p>
+          <a class="button button-dark" href="https://aiqfome.com/MG/itabirito/capannone">Abrir no Aiqfome ↗</a>
+          <small>Entrega, retirada e pagamento online</small>
         </div>
       </div>
     </div>
   </section>
 
-  <section id="cardapio">
-    <div class="container">
-      <div class="section-title">
-        <h2>Cardápio</h2>
-        <span>Link oficial (Linktree)</span>
-      </div>
-      <div class="grid">
-        <div class="card box col-6">
-          <h3>Abrir cardápio completo</h3>
-          <p>O cardápio fica no link oficial abaixo. Ele abre rápido e funciona em qualquer celular.</p>
-          <div class="hero-actions" style="margin-top:12px">
-            <a class="btn primary" data-menu href="#" target="_blank" rel="noreferrer">ABRIR CARDÁPIO</a>
-            <a class="btn" data-whatsapp-order href="#" target="_blank" rel="noreferrer">PEDIR PIZZA NO WHATSAPP</a>
-          </div>
-          <p style="margin-top:10px"><strong>Pedidos de pizza:</strong> WhatsApp <a href="#" data-whatsapp-order target="_blank" rel="noreferrer">(31) 98328-4984</a></p>
+  <section class="wifi-section">
+    <div class="wrap">
+      <div class="wifi-panel">
+        <div>
+          <p class="eyebrow light">WI-FI DO CLIENTE</p>
+          <h2>Conectou na Capannone Hotspot?</h2>
+          <p>Se o portal não abriu sozinho no seu celular, toque abaixo para liberar seu acesso.</p>
         </div>
-        <div class="card col-6" style="overflow:hidden">
-          <picture>
-            <source srcset="assets/img/p4_img1.webp" type="image/webp">
-            <img src="assets/img/p4_img1.jpg" alt="Pizzas Capannone" style="width:100%;height:100%;object-fit:cover;display:block">
-          </picture>
-        </div>
+        <a class="button button-order" href="portal.html">Liberar Wi-Fi ↗</a>
       </div>
     </div>
   </section>
 
-  <section id="wifi">
-    <div class="container">
-      <div class="section-title">
-        <h2>Wi‑Fi do cliente</h2>
-    
+  <section class="section" id="espaco">
+    <div class="wrap events-grid">
+      <div class="photo-card events-photo">
+        <img src="assets/img/p1_img2.jpg" alt="Pizza Margherita Capannone servida no salão">
       </div>
-      <div class="grid">
-        <div class="card box col-6">
-          <h3>Como acessar (cliente)</h3>
-          <p>
-            1) Conecte no Wi‑Fi <strong data-ssid>Capannone Hotspot</strong><br/>
-            2) O portal de acesso abre automaticamente.<br/>
-            3) Toque em <strong>LIBERAR WI‑FI</strong> e pronto.
-          </p>
-</div>
-
-        <div class="card box col-6">
-          <h3>Portal Capannone (página opcional)</h3>
-          <p>
-            Existe uma página pronta (para uso opcional pelo técnico como portal externo): <strong>/portal.html</strong>.
-            Ela contém os botões: <strong>LIBERAR WI‑FI</strong>, <strong>ABRIR CARDÁPIO</strong>, <strong>PROMOÇÕES DE HOJE</strong> e <strong>INSTAGRAM</strong>.
-          </p>
-          <div class="hero-actions" style="margin-top:12px">
-            <a class="btn primary" href="portal.html">VER PORTAL</a>
-            <a class="btn" data-insta href="#" target="_blank" rel="noreferrer">INSTAGRAM</a>
-          </div>
+      <div class="events-copy">
+        <p class="eyebrow">LOCAÇÃO DO ESPAÇO</p>
+        <h2>Seu momento especial merece uma mesa memorável.</h2>
+        <p>O Espaço Capannone é uma opção acolhedora para aniversários, encontros de família, confraternizações e pequenas celebrações.</p>
+        <ul class="check-list">
+          <li>Atendimento para organizar a sua comemoração</li>
+          <li>Cardápio e formato adaptados ao seu grupo</li>
+          <li>Estimativa sem compromisso pelo WhatsApp</li>
+        </ul>
+        <div class="estimate">
+          <span>Planejando um evento?</span>
+          <strong>Peça uma estimativa personalizada.</strong>
+          <small>Os valores variam conforme data, número de pessoas e cardápio escolhido.</small>
         </div>
+        <a class="button button-order" href="https://wa.me/5531989360951?text=Ol%C3%A1%21%20Quero%20uma%20estimativa%20para%20locar%20o%20espa%C3%A7o%20Capannone.">Falar sobre meu evento ↗</a>
+        <p class="contact-line">Locação: <a href="tel:+5531989360951">(31) 98936-0951</a></p>
       </div>
     </div>
   </section>
 
-  <section id="locacao">
-    <div class="container">
-      <div class="section-title">
-        <h2>Locação do Espaço Capannone</h2>
-        <span>Estimativa e contato</span>
-      </div>
-      <div class="grid">
-        <div class="card box col-12">
-          <h3>Calcular estimativa</h3>
-          <p>Use o link abaixo para estimar o cálculo da locação do Espaço Capannone:</p>
-          <div class="hero-actions" style="margin-top:12px">
-            <a class="btn primary" data-rent href="#" target="_blank" rel="noreferrer">CALCULAR LOCAÇÃO</a>
-            <a class="btn" data-whatsapp-rent href="#" target="_blank" rel="noreferrer">WHATSAPP LOCAÇÃO</a>
-          </div>
-          <p style="margin-top:12px">
-            <strong>Locação do Espaço Capannone:</strong> para negociações e orçamento real ligue ou mande mensagem no WhatsApp <a href="#" data-whatsapp-rent target="_blank" rel="noreferrer">(31) 98936-0951</a>.
-          </p>
+  <section class="section campaigns-section" id="campanhas">
+    <div class="wrap">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">NOVIDADES</p>
+          <h2>Campanhas e promoções do dia.</h2>
         </div>
+        <a class="text-link" href="https://www.instagram.com/capannoneitabirito/">Ver no Instagram <span>↗</span></a>
+      </div>
+      <div class="campaigns-grid" id="campaigns-grid">
+        <article class="campaign-card">
+          <img src="assets/img/p4_img1.jpg" alt="Pizza de pepperoni Capannone">
+          <div>
+            <span>DESTAQUE DA CASA</span>
+            <h3>À moda da casa</h3>
+            <p>Frango, calabresa, bacon, milho e catupiry — uma das queridinhas do cardápio.</p>
+            <a href="https://wa.me/5531983284984?text=Ol%C3%A1%21%20Quero%20pedir%20a%20pizza%20%C3%A0%20moda%20da%20casa.">Pedir agora ↗</a>
+          </div>
+        </article>
+        <article class="campaign-card">
+          <img src="assets/img/p5_img1.jpg" alt="Pizza especial Capannone">
+          <div>
+            <span>PARA COMPARTILHAR</span>
+            <h3>Sabores para todos os momentos</h3>
+            <p>Acompanhe nossas redes para ver as novidades do dia.</p>
+          </div>
+        </article>
+      </div>
+      <p class="campaign-note" id="campaignHint"></p>
+    </div>
+  </section>
+
+  <section class="location-section" id="localizacao">
+    <div class="location-grid">
+      <div class="location-copy">
+        <p class="eyebrow">LOCALIZAÇÃO E HORÁRIO</p>
+        <h2>Vem viver uma noite gostosa com a gente.</h2>
+        <address>Rua Turmalina, 153<br>Santa Tereza · Itabirito-MG<br>CEP 35454-084</address>
+        <div class="hours">
+          <span>Funcionamento</span>
+          <strong>Todos os dias · 18h às 23h</strong>
+        </div>
+        <div class="location-actions">
+          <a class="button button-dark" href="https://www.google.com/maps/search/?api=1&query=Rua+Turmalina+153+Santa+Tereza+Itabirito+MG">Traçar rota ↗</a>
+          <a class="text-link" href="tel:+553135631105">(31) 3563-1105</a>
+        </div>
+      </div>
+      <div class="map-frame">
+        <iframe title="Mapa de localização da Pizzaria Capannone" src="https://www.google.com/maps?q=Rua%20Turmalina%20153%20Santa%20Tereza%20Itabirito%20MG&output=embed" loading="lazy"></iframe>
       </div>
     </div>
   </section>
 
-  <section id="campanhas">
-    <div class="container">
-      <div class="section-title">
-        <h2>Campanhas e eventos</h2>
-        <span id="campaignHint">Carregando…</span>
+  <section class="social-section">
+    <div class="wrap social-grid">
+      <div>
+        <p class="eyebrow">REDES SOCIAIS</p>
+        <h2>Pizza boa rende assunto. E foto também.</h2>
+        <p>Acompanhe pizzas saindo quentinhas, o clima do salão e as novidades da Capannone.</p>
       </div>
-
-      <div class="gallery" id="campaignGrid" aria-live="polite"></div>
-
-      <div class="notice" style="margin-top:12px">
-        
+      <div class="social-actions">
+        <a href="https://www.instagram.com/capannoneitabirito/">
+          <span>Instagram</span><strong>@capannoneitabirito</strong><b>↗</b>
+        </a>
+        <a href="https://www.facebook.com/CapannoneItabirito">
+          <span>Facebook</span><strong>/CapannoneItabirito</strong><b>↗</b>
+        </a>
       </div>
     </div>
   </section>
 </main>
 
 <footer>
-  <div class="container">
-    <div class="foot">
-      <small>© <span id="year"></span> Capannone Itabirito • Todos os direitos reservados.</small>
-      <small><a href="admin.html" style="text-decoration:none;opacity:.85">Admin</a></small>
+  <div class="wrap footer-grid">
+    <div class="footer-brand">
+      <a href="#inicio">
+        <img src="assets/brand/logo.webp" alt="Capannone Casa das Massas">
+      </a>
+      <p>Pizzaria artesanal em Itabirito para encontros, sabor e boas memórias.</p>
     </div>
+    <div>
+      <h3>Pedidos</h3>
+      <a href="https://wa.me/5531983284984?text=Ol%C3%A1%21%20Quero%20fazer%20um%20pedido%20na%20Capannone.">WhatsApp: (31) 98328-4984</a>
+      <a href="tel:+553135631105">Fixo: (31) 3563-1105</a>
+    </div>
+    <div>
+      <h3>Eventos</h3>
+      <a href="https://wa.me/5531989360951?text=Ol%C3%A1%21%20Quero%20saber%20sobre%20a%20loca%C3%A7%C3%A3o%20do%20espa%C3%A7o%20Capannone.">Locação: (31) 98936-0951</a>
+      <a href="admin.html">Painel administrativo</a>
+    </div>
+    <div>
+      <h3>Visite</h3>
+      <span>Rua Turmalina, 153<br>Santa Tereza · Itabirito-MG</span>
+      <span>Todos os dias · 18h às 23h</span>
+    </div>
+  </div>
+  <div class="wrap footer-bottom">
+    <span>© <span id="year"></span> Capannone Dasmmelhores.</span>
+    <span>Feito para abrir o apetite.</span>
   </div>
 </footer>
 
-<script>
-  document.getElementById("year").textContent = new Date().getFullYear();
-</script>
-<script src="js/site.js"></script>
+<a class="floating-order" href="https://wa.me/5531983284984?text=Ol%C3%A1%21%20Quero%20fazer%20um%20pedido%20na%20Capannone.">
+  <span>✦</span> Pedir agora
+</a>
+
+<script src="js/site.js" defer></script>
 </body>
 </html>
