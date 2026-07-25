@@ -78,6 +78,20 @@ async function loadGalleryList() {
   }
 }
 
+async function connectGallery(pin) {
+  if (!pin) return;
+  try {
+    await signInWithEmailAndPassword(auth, GALLERY_EMAIL, pin);
+    message("#gallery-connection-message", "", "");
+  } catch (error) {
+    message(
+      "#gallery-connection-message",
+      "Não foi possível conectar a galeria de fotos com o PIN atual. Se o PIN foi trocado recentemente, atualize também a senha da conta da galeria no Firebase (veja ESTRUTURA-DO-SITE.md, seção 10).",
+      "error"
+    );
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   const panel = document.querySelector("#gallery-admin-panel");
   if (!panel) return;
@@ -85,22 +99,14 @@ document.addEventListener("DOMContentLoaded", () => {
   // A galeria não tem login próprio: ela usa o mesmo PIN do painel de campanhas.
   // Assim que o PIN é validado em admin.js, este script tenta conectar à galeria
   // automaticamente, usando o PIN como senha da conta técnica da galeria no Firebase.
-  window.addEventListener("capannone-admin-unlocked", async (event) => {
-    const pin = event.detail?.pin || "";
-    if (!pin) return;
-    try {
-      await signInWithEmailAndPassword(auth, GALLERY_EMAIL, pin);
-      message("#gallery-connection-message", "", "");
-    } catch (error) {
-      message(
-        "#gallery-connection-message",
-        "Não foi possível conectar a galeria de fotos com o PIN atual. Se o PIN foi trocado recentemente, atualize também a senha da conta da galeria no Firebase (veja ESTRUTURA-DO-SITE.md, seção 10).",
-        "error"
-      );
-    }
-  });
-
+  // Como este script é um módulo (carrega o Firebase de forma assíncrona), ele pode
+  // terminar de carregar DEPOIS do login já ter acontecido — por isso também checamos
+  // se já existe um PIN válido na sessão assim que o módulo termina de carregar.
+  window.addEventListener("capannone-admin-unlocked", (event) => connectGallery(event.detail?.pin || ""));
   window.addEventListener("capannone-admin-locked", () => signOut(auth).catch(() => {}));
+
+  const existingPin = sessionStorage.getItem("capannone-admin-pin");
+  if (existingPin) connectGallery(existingPin);
 
   document.querySelector("#gallery-refresh-button").addEventListener("click", loadGalleryList);
 
