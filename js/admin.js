@@ -41,7 +41,10 @@ holder.innerHTML = `<p class="empty-state">${error.message}</p>`;
 document.addEventListener("DOMContentLoaded", () => {
 const loginCard = document.querySelector("#login-card");
 const panel = document.querySelector("#admin-panel");
-const openPanel = () => { loginCard.hidden = true; panel.hidden = false; showCampaigns(); };
+const openPanel = () => {
+loginCard.hidden = true; panel.hidden = false; showCampaigns();
+window.dispatchEvent(new CustomEvent("capannone-admin-unlocked", { detail: { pin: getPin() } }));
+};
 document.querySelector("#login-button").addEventListener("click", async () => {
 const pin = document.querySelector("#pin").value.trim();
 if (!pin) return message("#login-message", "Digite o PIN de administração.", "error");
@@ -53,7 +56,10 @@ openPanel();
 } catch (error) { message("#login-message", error.message, "error"); }
 });
 document.querySelector("#pin").addEventListener("keydown", (event) => { if (event.key === "Enter") document.querySelector("#login-button").click(); });
-document.querySelector("#logout-button").addEventListener("click", () => { sessionStorage.removeItem("capannone-admin-pin"); panel.hidden = true; loginCard.hidden = false; });
+document.querySelector("#logout-button").addEventListener("click", () => {
+sessionStorage.removeItem("capannone-admin-pin"); panel.hidden = true; loginCard.hidden = false;
+window.dispatchEvent(new CustomEvent("capannone-admin-locked"));
+});
 document.querySelector("#refresh-button").addEventListener("click", showCampaigns);
 document.querySelector("#history-load").addEventListener("click", async () => {
 try {
