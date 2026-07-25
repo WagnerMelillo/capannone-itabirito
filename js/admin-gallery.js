@@ -3,6 +3,8 @@ import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
+const GALLERY_EMAIL = "admin@capannoneitabirito.com";
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -76,27 +78,36 @@ async function loadGalleryList() {
   }
 }
 
+async function connectGallery(pin) {
+  if (!pin) return;
+  try {
+    await signInWithEmailAndPassword(auth, GALLERY_EMAIL, pin);
+    message("#gallery-connection-message", "", "");
+  } catch (error) {
+    message(
+      "#gallery-connection-message",
+      "Não foi possível conectar a galeria de fotos com o PIN atual. Se o PIN foi trocado recentemente, atualize também a senha da conta da galeria no Firebase (veja ESTRUTURA-DO-SITE.md, seção 10).",
+      "error"
+    );
+  }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
-  const loginCard = document.querySelector("#gallery-login-card");
   const panel = document.querySelector("#gallery-admin-panel");
-  if (!loginCard || !panel) return;
+  if (!panel) return;
 
-  document.querySelector("#gallery-login-button").addEventListener("click", async () => {
-    const email = document.querySelector("#gallery-email").value.trim();
-    const password = document.querySelector("#gallery-password").value;
-    if (!email || !password) {
-      message("#gallery-login-message", "Preencha e-mail e senha.", "error");
-      return;
-    }
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      message("#gallery-login-message", "", "");
-    } catch (error) {
-      message("#gallery-login-message", "Login inválido.", "error");
-    }
-  });
+  // A galeria não tem login próprio: ela usa o mesmo PIN do painel de campanhas.
+  // Assim que o PIN é validado em admin.js, este script tenta conectar à galeria
+  // automaticamente, usando o PIN como senha da conta técnica da galeria no Firebase.
+  // Como este script é um módulo (carrega o Firebase de forma assíncrona), ele pode
+  // terminar de carregar DEPOIS do login já ter acontecido — por isso também checamos
+  // se já existe um PIN válido na sessão assim que o módulo termina de carregar.
+  window.addEventListener("capannone-admin-unlocked", (event) => connectGallery(event.detail?.pin || ""));
+  window.addEventListener("capannone-admin-locked", () => signOut(auth).catch(() => {}));
 
-  document.querySelector("#gallery-logout-button").addEventListener("click", () => signOut(auth));
+  const existingPin = sessionStorage.getItem("capannone-admin-pin");
+  if (existingPin) connectGallery(existingPin);
+
   document.querySelector("#gallery-refresh-button").addEventListener("click", loadGalleryList);
 
   document.querySelector("#gallery-image").addEventListener("change", (event) => {
@@ -136,13 +147,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   onAuthStateChanged(auth, (user) => {
-    if (user) {
-      loginCard.hidden = true;
-      panel.hidden = false;
-      loadGalleryList();
-    } else {
-      loginCard.hidden = false;
-      panel.hidden = true;
-    }
+    if (user) loadGalleryList();
   });
 });
