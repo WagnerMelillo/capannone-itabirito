@@ -86,8 +86,68 @@
       </div>
     </div>
   </div>
+
+  <section class="gallery-admin-section">
+    <div class="admin-heading">
+      <div>
+        <p class="eyebrow">FOTOS DO ESPAÇO</p>
+        <h1>Galeria do Espaço Capannone</h1>
+      </div>
+    </div>
+
+    <div class="admin-login" id="gallery-login-card">
+      <p>Login separado, só para gerenciar as fotos da galeria do espaço (não é o mesmo PIN de campanhas/história).</p>
+      <label for="gallery-email">E-mail</label>
+      <input id="gallery-email" type="email" placeholder="e-mail de acesso">
+      <label for="gallery-password">Senha</label>
+      <input id="gallery-password" type="password" placeholder="Senha">
+      <button class="button button-order" id="gallery-login-button" type="button">Entrar na galeria</button>
+      <p class="form-message" id="gallery-login-message" role="status"></p>
+    </div>
+
+    <div id="gallery-admin-panel" hidden>
+      <div class="admin-heading">
+        <div>
+          <p class="eyebrow">FOTOS PUBLICADAS</p>
+          <h2>Gerencie as fotos do espaço</h2>
+        </div>
+        <button class="text-button" id="gallery-logout-button" type="button">Sair da galeria</button>
+      </div>
+
+      <div class="admin-columns">
+        <form class="admin-form" id="gallery-upload-form">
+          <h2>Nova foto</h2>
+          <p>Fotos grandes são redimensionadas automaticamente antes de salvar.</p>
+
+          <label for="gallery-image">Imagem (JPG, PNG ou WebP)</label>
+          <input id="gallery-image" type="file" accept="image/jpeg,image/png,image/webp">
+          <img class="image-preview" id="gallery-image-preview" alt="Prévia da foto" hidden>
+
+          <label for="gallery-caption">Legenda (opcional)</label>
+          <input id="gallery-caption" placeholder="Ex.: Mezanino para grupos maiores">
+
+          <button class="button button-dark" type="submit">Publicar foto</button>
+          <p class="form-message" id="gallery-upload-message" role="status"></p>
+        </form>
+
+        <div class="campaign-manager">
+          <div class="manager-heading">
+            <div>
+              <h2>Fotos no site</h2>
+              <p>As fotos aparecem na galeria pública do espaço (espaco-fotos.html).</p>
+            </div>
+            <button class="text-button" id="gallery-refresh-button" type="button">Atualizar</button>
+          </div>
+          <div class="admin-campaigns" id="gallery-admin-list">
+            <p class="empty-state">Carregando fotos…</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <script src="js/admin.js" defer></script>
+<script type="module" src="js/admin-gallery.js"></script>
 </body>
 </html>
