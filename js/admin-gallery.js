@@ -3,7 +3,7 @@ import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from
 import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
-const GALLERY_EMAIL = "admin@capannoneitabirito.com";
+const GALLERY_EMAIL = "magnamelillo@gmail.com";
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
