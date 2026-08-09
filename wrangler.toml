@@ -1,0 +1,8 @@
+name = "capannone-itabirito-api"
+main = "worker/media-api.js"
+compatibility_date = "2026-08-08"
+account_id = "e4f8ed114657d2ad09d7a6000a7fedae"
+
+[[kv_namespaces]]
+binding = "CAPANNONE_DATA"
+id = "0537ae69101746d09182025e49f13876"

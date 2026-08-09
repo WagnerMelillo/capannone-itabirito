@@ -1,12 +1,15 @@
-Capannone Itabirito — site estático (Cloudflare Pages) + painel admin (Cloudflare Worker + KV)
+Capannone Itabirito — site no Cloudflare Pages com conteúdo gerenciado no Firebase
 
-Para o passo a passo completo, arquitetura, como publicar alterações e como acessar o
-painel admin, veja o arquivo ESTRUTURA-DO-SITE.md nesta mesma pasta.
+Referência completa: ESTRUTURA-DO-SITE.md
 
-Resumo rápido:
-- Site publicado em: www.capannone.dasmmelhores.com
-- Código-fonte (branch main) = o que está publicado. Deploy é automático via Cloudflare Pages.
-- Campanhas e o texto "A Capannone" são servidos por um Cloudflare Worker separado
-  (capannone-itabirito-api), com dados guardados em KV. Não há R2 em uso.
-- O PIN do painel admin fica em um Secret do Worker (não no Pages). Veja a seção 8 de
-  ESTRUTURA-DO-SITE.md para saber onde trocá-lo com segurança.
+Resumo:
+- Site oficial: https://capannone.dasmmelhores.com/
+- Hospedagem: Cloudflare Pages, com publicação automática do branch main.
+- Conteúdo, cardápio, campanhas, galeria e perfis: Cloud Firestore.
+- Login do painel: Firebase Authentication, com contas individuais.
+- Imagens e vídeos enviados pelo painel: Cloudflare Worker + KV.
+- O Firebase Hosting existe no projeto, mas não hospeda o site oficial.
+- O portal.html ainda é apenas uma página de aceite/redirecionamento; não há
+  integração comprovada com o controlador físico do hotspot.
+
+Não registre senhas, tokens ou credenciais neste repositório.

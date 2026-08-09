@@ -1,0 +1,160 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function currentProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isActiveAdmin() {
+      return signedIn()
+        && currentProfile().active == true
+        && currentProfile().mustChangePassword == false
+        && currentProfile().role in ['admin', 'superadmin'];
+    }
+
+    function isSuperadmin() {
+      return isActiveAdmin()
+        && request.auth.uid == 'n7YwMAtBWrZmQUkTwfDQr5mnQsB2'
+        && currentProfile().role == 'superadmin';
+    }
+
+    function validUser(data) {
+      return data.keys().hasAll(['displayName', 'email', 'role', 'active', 'mustChangePassword', 'updatedAt'])
+        && data.keys().hasOnly(['displayName', 'email', 'role', 'active', 'mustChangePassword', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy', 'passwordChangedAt'])
+        && data.displayName is string && data.displayName.size() <= 100
+        && data.email is string && data.email.size() <= 200
+        && data.role in ['admin', 'superadmin']
+        && data.active is bool
+        && data.mustChangePassword is bool
+        && data.updatedAt is string;
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isSuperadmin());
+      allow create: if validUser(request.resource.data) && (
+        (
+          request.auth.uid == 'n7YwMAtBWrZmQUkTwfDQr5mnQsB2'
+          && uid == request.auth.uid
+          && request.resource.data.role == 'superadmin'
+          && request.resource.data.active == true
+        )
+        || (
+          isSuperadmin()
+          && uid != 'n7YwMAtBWrZmQUkTwfDQr5mnQsB2'
+          && request.resource.data.role == 'admin'
+        )
+      );
+      allow update: if validUser(request.resource.data) && (
+        (
+          isSuperadmin()
+          && uid != 'n7YwMAtBWrZmQUkTwfDQr5mnQsB2'
+          && resource.data.role == 'admin'
+          && request.resource.data.role == 'admin'
+          && request.resource.data.email == resource.data.email
+        )
+        || (
+          signedIn()
+          && request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mustChangePassword', 'passwordChangedAt', 'updatedAt'])
+          && resource.data.mustChangePassword == true
+          && request.resource.data.mustChangePassword == false
+        )
+      );
+      allow delete: if false;
+    }
+
+    function validMenuItem(data) {
+      return data.keys().hasAll(['name', 'category', 'description', 'prices', 'active', 'sortOrder', 'updatedAt', 'updatedBy'])
+        && data.keys().hasOnly(['name', 'category', 'description', 'prices', 'active', 'sortOrder', 'imageUrl', 'imageMediaId', 'videoUrl', 'videoMediaId', 'orderMessage', 'createdAt', 'updatedAt', 'updatedBy'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.category in ['pizzas', 'cervejas', 'refrigerantes', 'sucos', 'promocoes']
+        && data.description is string && data.description.size() <= 1000
+        && data.prices is list && data.prices.size() > 0 && data.prices.size() <= 12
+        && data.active is bool
+        && data.sortOrder is number
+        && data.imageUrl is string && data.imageUrl.size() <= 1000
+        && data.imageMediaId is string && data.imageMediaId.size() <= 100
+        && data.videoUrl is string && data.videoUrl.size() <= 1000
+        && data.videoMediaId is string && data.videoMediaId.size() <= 100
+        && data.orderMessage is string && data.orderMessage.size() <= 240
+        && data.updatedAt is string
+        && data.updatedBy == request.auth.uid;
+    }
+
+    match /menuItems/{itemId} {
+      allow read: if true;
+      allow create, update: if isActiveAdmin() && validMenuItem(request.resource.data);
+      allow delete: if isActiveAdmin();
+    }
+
+    function validCampaign(data) {
+      return data.keys().hasAll(['title', 'description', 'status', 'priority', 'productIds', 'discountType', 'discountValue', 'imageUrl', 'imageMediaId', 'startAt', 'endAt', 'createdAt', 'updatedAt', 'updatedBy'])
+        && data.keys().hasOnly(['title', 'description', 'status', 'priority', 'productIds', 'discountType', 'discountValue', 'imageUrl', 'imageMediaId', 'startAt', 'endAt', 'createdAt', 'updatedAt', 'updatedBy'])
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 100
+        && data.description is string && data.description.size() <= 1000
+        && data.status in ['draft', 'scheduled', 'active', 'ended']
+        && data.priority is number
+        && data.productIds is list && data.productIds.size() <= 100
+        && data.discountType in ['none', 'percentage', 'fixed', 'special_price']
+        && data.discountValue is number && data.discountValue >= 0
+        && data.imageUrl is string && data.imageUrl.size() <= 1000
+        && data.imageMediaId is string && data.imageMediaId.size() <= 100
+        && data.startAt is string && data.startAt.size() <= 40
+        && data.endAt is string && data.endAt.size() <= 40
+        && data.createdAt is string
+        && data.updatedAt is string
+        && data.updatedBy == request.auth.uid;
+    }
+
+    match /campaigns/{campaignId} {
+      allow read: if true;
+      allow create, update: if isActiveAdmin() && validCampaign(request.resource.data);
+      allow delete: if isActiveAdmin();
+    }
+
+    match /siteContent/{contentId} {
+      allow read: if true;
+      allow create, update: if isActiveAdmin()
+        && contentId == 'home'
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.updatedAt is string;
+      allow delete: if false;
+    }
+
+    match /espaco_fotos/{photoId} {
+      allow read: if true;
+      allow create: if isActiveAdmin()
+        && request.resource.data.keys().hasAll(['caption', 'imageUrl', 'mediaId', 'createdAt', 'createdBy'])
+        && request.resource.data.caption is string
+        && request.resource.data.caption.size() <= 240
+        && request.resource.data.imageUrl is string
+        && request.resource.data.imageUrl.size() <= 1000
+        && request.resource.data.mediaId is string
+        && request.resource.data.createdAt is string
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isActiveAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['caption'])
+        && request.resource.data.caption is string
+        && request.resource.data.caption.size() <= 240;
+      allow delete: if isActiveAdmin();
+    }
+
+    match /auditLogs/{logId} {
+      allow create: if isActiveAdmin()
+        && request.resource.data.actorUid == request.auth.uid
+        && request.resource.data.actorRole == currentProfile().role
+        && request.resource.data.createdAt is string;
+      allow read: if isSuperadmin();
+      allow update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

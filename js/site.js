@@ -1,122 +1,345 @@
-const ORDER_URL = "https://wa.me/5531983284984?text=";
-const CAMPAIGN_API = "https://capannone-itabirito-api.wagnermelillo.workers.dev";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { collection, doc, getDoc, getDocs, getFirestore } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+import { CATEGORY_LABELS, DEFAULT_MENU_ITEMS, DEFAULT_SITE_CONTENT } from "./default-content.js";
 
-const pizzas = [
-["Alemã","molho de tomate, muçarela, azeitona, catupiry, lombo canadense, calabresa, bacon e orégano",67],
-["Pepperoni","molho de tomate, muçarela, azeitona, catupiry, pepperoni e orégano",77],
-["Calabresa com catupiry","molho de tomate, muçarela, calabresa, catupiry e orégano",67],
-["Calabresa baiana","molho de tomate, calabresa ralada, catupiry, lemon pepper e orégano",67],
-["Lombo canadense","molho de tomate, muçarela, lombo canadense, azeitona, catupiry e orégano",67],
-["Portuguesa","molho de tomate, muçarela, calabresa, presunto, ovos, catupiry, azeitonas pretas e orégano",67],
-["Palmito à bolonhesa","molho à bolonhesa, muçarela, palmito, catupiry, azeitonas e orégano",67],
-["Frango com palmito","molho de tomate, muçarela, milho, azeitona, catupiry, peito de frango, palmito e orégano",67],
-["Presunto com catupiry","molho de tomate, muçarela, presunto, catupiry, azeitonas e orégano",67],
-["À moda da casa","molho de tomate, muçarela, peito de frango, calabresa, bacon, milho, catupiry, azeitonas e orégano",67],
-["Bolonhesa","molho à bolonhesa, muçarela, champignon na manteiga, catupiry, azeitonas e orégano",67],
-["Siciliana","molho de tomate, muçarela, champignon na manteiga, catupiry, bacon, calabresa, azeitonas e orégano",67],
-["Bação","molho de tomate, cupim ao molho de cerveja preta, muçarela, catupiry, azeitonas e orégano",77],
-["Carne seca","molho de tomate, muçarela, azeitona, catupiry, carne seca e orégano",77],
-["Mineirinha","molho de tomate, muçarela, azeitona, catupiry, linguiça suína ao molho de mel com mostarda, pimenta calabresa, alho frito e orégano",77],
-["Abobrinha","molho de tomate, fatias de abobrinha, muçarela, queijo polenguinho, bacon e orégano",67],
-["Brócolis com bacon","molho de tomate, muçarela, catupiry, brócolis, bacon e alho frito",67],
-["Milho e bacon","molho de tomate, muçarela, azeitona, catupiry, milho, bacon e orégano",67],
-["Atum com catupiry","molho de tomate, muçarela, atum, catupiry, azeitonas e orégano",67],
-["Vegetariana","molho de tomate, muçarela, palmito, milho, catupiry, champignon na manteiga, azeitonas e orégano",67],
-["Marguerita","molho de tomate, muçarela, tomate cereja e manjericão",67],
-["Quatro queijos","molho de tomate, muçarela, provolone, cheddar, catupiry e orégano",67],
-["Palmito com catupiry","molho de tomate, muçarela, palmito, milho, catupiry, azeitonas e orégano",67],
-["Alho-poró","molho de tomate, muçarela, requeijão catupiry, alho-poró, bacon, creme de leite, alho granulado e orégano",77],
-["Frango com catupiry","molho de tomate, muçarela, peito de frango, milho, catupiry, azeitonas e orégano",67],
-["Alho e óleo","molho de tomate, muçarela, azeite, alho frito e orégano",67],
-["Abacaxi com bacon","molho de tomate, muçarela, azeitona, catupiry, abacaxi caramelizado, bacon e orégano",77],
-["Presunto parma","molho de tomate, muçarela, azeitona, catupiry, presunto parma e orégano",77],
-["Charmozinha","massa, molho de tomate especial, muçarela, carne suína desfiada, requeijão cremoso, cebola roxa e molho barbecue",67]
-];
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const ORDER_TEXT = "Olá! Quero fazer um pedido na Capannone.";
+const EVENT_TEXT = "Olá! Quero saber sobre a locação do espaço Capannone.";
+const state = {
+  content: { ...DEFAULT_SITE_CONTENT },
+  products: DEFAULT_MENU_ITEMS.map((item) => ({ ...item, prices: item.prices.map((price) => ({ ...price })) })),
+  campaigns: [],
+  activeTab: "pizzas"
+};
 
-const money = (value) => `R$ ${value.toFixed(2).replace(".", ",")}`;
+const $ = (selector) => document.querySelector(selector);
+const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+const clean = (value, limit = 1000) => String(value ?? "").trim().slice(0, limit);
+const number = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
+const money = (value) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(number(value));
 
-function pizzaMarkup() {
-return `<p class="menu-note">Média 30cm · 6 fatias &nbsp; | &nbsp; Grande 35cm · 8 fatias &nbsp; | &nbsp; Gigante 40cm · 12 fatias</p><div class="pizza-grid">${pizzas.map(([name, ingredients, base]) => {
-const msg = encodeURIComponent(`Olá! Quero pedir a pizza ${name} na Capannone.`);
-return `<article class="pizza-card"><h3>${name}</h3><p class="ingredients">${ingredients}</p><div class="prices"><div><span>Média · 30cm</span><strong>${money(base)}</strong></div><div><span>Grande · 35cm</span><strong>${money(base + 12)}</strong></div><div><span>Gigante · 40cm</span><strong>${money(base + 24)}</strong></div></div><a class="pizza-order" href="${ORDER_URL}${msg}" target="_blank" rel="noopener">Pedir este sabor ↗</a></article>`;
-}).join("")}</div>`;
+function safeUrl(value, { allowDataImage = false } = {}) {
+  const source = clean(value, 3000);
+  if (!source) return "";
+  if (allowDataImage && /^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=\s]+$/i.test(source)) return source;
+  try {
+    const url = new URL(source, location.href);
+    if (url.protocol === "https:" || (url.origin === location.origin && ["http:", "https:"].includes(url.protocol))) return url.href;
+  } catch (_) {}
+  return "";
 }
 
-function drinksMarkup() {
-return `<div class="drinks-grid"><article class="drink-card"><h3>Cervejas</h3><ul class="drink-list"><li><span>Heineken Zero · long neck</span><b>R$ 12,00</b></li><li><span>Heineken · 600ml / long neck</span><b>R$ 18,00 / 12,00</b></li><li><span>Original · 600ml</span><b>R$ 16,00</b></li><li><span>Stella Artois · 600ml / long neck</span><b>R$ 17,00 / 12,00</b></li><li><span>Spaten · 600ml</span><b>R$ 16,00</b></li></ul></article><article class="drink-card"><h3>Refrigerantes</h3><ul class="drink-list"><li><span>Coca-Cola · lata 350ml</span><b>R$ 6,50</b></li><li><span>Coca-Cola · 2 litros</span><b>R$ 18,00</b></li><li><span>Guaraná · lata 350ml</span><b>R$ 6,50</b></li><li><span>Guaraná · 1 litro</span><b>R$ 11,00</b></li><li><span>Guaraná · 2 litros</span><b>R$ 16,00</b></li></ul></article></div>`;
+function phoneDigits(value) {
+  return clean(value, 24).replace(/\D/g, "").slice(0, 13);
 }
 
-function juicesMarkup() {
-return `<div class="drinks-grid"><article class="drink-card"><h3>Sucos</h3><ul class="drink-list"><li><span>Suco de pêssego · 1 litro</span><b>R$ 14,00</b></li><li><span>Suco de pêssego · lata 290ml</span><b>R$ 6,50</b></li><li><span>Suco de uva · 1 litro</span><b>R$ 14,00</b></li><li><span>Suco de uva · lata 290ml</span><b>R$ 6,50</b></li></ul></article><article class="drink-card"><h3>Para acompanhar</h3><p class="ingredients">Consulte a equipe sobre disponibilidade de bebidas e combinações para o seu pedido.</p><a class="button button-dark" href="${ORDER_URL}${encodeURIComponent("Olá! Quero fazer um pedido na Capannone.")}" target="_blank" rel="noopener">Falar com a equipe ↗</a></article></div>`;
+function formatPhone(value) {
+  const digits = phoneDigits(value).replace(/^55(?=\d{10,11}$)/, "");
+  if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return clean(value, 24);
 }
 
-function promotionMarkup() {
-const msg = encodeURIComponent("Olá! Quero pedir a pizza à moda da casa na Capannone.");
-return `<div class="promo-menu"><div><p class="eyebrow light">PROMOÇÃO DE DESTAQUE</p><h3>À moda da casa</h3><p>Molho de tomate, muçarela, peito de frango, calabresa, bacon, milho, catupiry, azeitonas e orégano.</p><a class="pizza-order" href="${ORDER_URL}${msg}" target="_blank" rel="noopener">Pedir essa pizza ↗</a></div><div class="promo-prices"><div><span>Média · 30cm</span><b>R$ 67,00</b></div><div><span>Grande · 35cm</span><b>R$ 79,00</b></div><div><span>Gigante · 40cm</span><b>R$ 91,00</b></div></div></div>`;
+function whatsappUrl(numberValue, message) {
+  const digits = phoneDigits(numberValue);
+  return digits ? `https://wa.me/${digits}?text=${encodeURIComponent(message)}` : "#";
 }
 
-function renderMenu(tab = "pizzas") {
-const content = document.querySelector("#menu-content");
-if (!content) return;
-content.innerHTML = tab === "pizzas" ? pizzaMarkup() : tab === "cervejas" ? drinksMarkup().replace("Refrigerantes", "Refrigerantes") : tab === "refrigerantes" ? drinksMarkup() : tab === "sucos" ? juicesMarkup() : promotionMarkup();
-if (tab === "cervejas") content.innerHTML = `<div class="drinks-grid"><article class="drink-card"><h3>Cervejas</h3><ul class="drink-list"><li><span>Heineken Zero · long neck</span><b>R$ 12,00</b></li><li><span>Heineken · 600ml / long neck</span><b>R$ 18,00 / 12,00</b></li><li><span>Original · 600ml</span><b>R$ 16,00</b></li><li><span>Stella Artois · 600ml / long neck</span><b>R$ 17,00 / 12,00</b></li><li><span>Spaten · 600ml</span><b>R$ 16,00</b></li></ul></article><article class="drink-card"><h3>Boa pedida</h3><p class="ingredients">Uma pizza quentinha e uma cerveja gelada para deixar a sua noite ainda melhor.</p><a class="button button-dark" href="${ORDER_URL}${encodeURIComponent("Olá! Quero fazer um pedido na Capannone.")}" target="_blank" rel="noopener">Fazer pedido ↗</a></article></div>`;
-if (tab === "refrigerantes") content.innerHTML = `<div class="drinks-grid"><article class="drink-card"><h3>Refrigerantes</h3><ul class="drink-list"><li><span>Coca-Cola · lata 350ml</span><b>R$ 6,50</b></li><li><span>Coca-Cola · 2 litros</span><b>R$ 18,00</b></li><li><span>Guaraná · lata 350ml</span><b>R$ 6,50</b></li><li><span>Guaraná · 1 litro</span><b>R$ 11,00</b></li><li><span>Guaraná · 2 litros</span><b>R$ 16,00</b></li></ul></article><article class="drink-card"><h3>Para acompanhar</h3><p class="ingredients">Combine sua pizza com a bebida que não pode faltar na sua mesa.</p><a class="button button-dark" href="${ORDER_URL}${encodeURIComponent("Olá! Quero fazer um pedido na Capannone.")}" target="_blank" rel="noopener">Fazer pedido ↗</a></article></div>`;
+function setText(selector, value) {
+  const element = $(selector);
+  if (element && clean(value)) element.textContent = clean(value, 5000);
 }
 
-function campaignCard(item) {
-const safeTitle = String(item.title || "Novidade Capannone").replace(/[<>]/g, "");
-const safeText = String(item.description || "Confira essa novidade da Capannone.").replace(/[<>]/g, "");
-const src = item.imageUrl || item.url;
-if (!src) return "";
-return `<article class="campaign-card"><img src="${src}" alt="${safeTitle}" loading="lazy"><div><span>NOVIDADE DA CASA</span><h3>${safeTitle}</h3><p>${safeText}</p><a href="${ORDER_URL}${encodeURIComponent(`Olá! Vi a campanha '${safeTitle}' e quero saber mais.`)}" target="_blank" rel="noopener">Quero saber mais ↗</a></div></article>`;
+function setImage(selector, value) {
+  const element = $(selector);
+  const source = safeUrl(value, { allowDataImage: true });
+  if (element && source) element.src = source;
 }
 
-async function loadCampaigns() {
-const grid = document.querySelector("#campaigns-grid");
-if (!grid) return;
-try {
-const response = await fetch(`${CAMPAIGN_API}/campaigns`, { cache: "no-store" });
-if (!response.ok) throw new Error("Campanhas indisponíveis");
-const data = await response.json();
-if (Array.isArray(data.items) && data.items.length) {
-grid.innerHTML = data.items.slice(0, 6).map(campaignCard).join("");
-}
-} catch (_) {
-// The permanent cards in the HTML remain available when the campaign service is offline.
-}
+function setLinks(kind, value) {
+  const url = safeUrl(value);
+  if (!url) return;
+  $$(`[data-site-link="${kind}"]`).forEach((link) => { link.href = url; });
 }
 
-async function loadStory() {
-const holder = document.querySelector("#story-content");
-if (!holder) return;
-try {
-const response = await fetch(`${CAMPAIGN_API}/content/history`, { cache: "no-store" });
-if (!response.ok) return;
-const { value } = await response.json();
-if (!value) return;
-holder.replaceChildren(...String(value).split(/\n\s*\n/).filter(Boolean).map((paragraph) => {
-const element = document.createElement("p");
-element.textContent = paragraph;
-return element;
-}));
-} catch (_) {
-// The institutional story remains visible when the content service is unavailable.
-}
+function setValues(kind, value) {
+  $$(`[data-site-value="${kind}"]`).forEach((element) => { element.textContent = value; });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-document.querySelector("#year").textContent = new Date().getFullYear();
+function applySiteContent(content) {
+  state.content = { ...DEFAULT_SITE_CONTENT, ...content };
+  const current = state.content;
+  setText("#site-announcement", current.announcement);
+  setText("#site-hero-text", current.heroText);
+  setText("#site-history-title", current.historyTitle);
+  setText("#site-events-title", current.eventsTitle);
+  setText("#site-events-text", current.eventsText);
+  setText("#site-location-hours", current.openingHours);
+  setText("#site-footer-hours", current.openingHours);
+  setImage("#site-hero-image", current.heroImageUrl);
+  setImage("#site-history-image", current.historyImageUrl);
+  setImage("#site-events-image", current.eventsImageUrl);
+
+  const heroTitle = $("#site-hero-title");
+  if (heroTitle) {
+    const emphasis = document.createElement("em");
+    emphasis.textContent = clean(current.heroHighlight, 40);
+    heroTitle.replaceChildren(document.createTextNode(`${clean(current.heroTitle, 80)} `), emphasis, document.createTextNode(` ${clean(current.heroSuffix, 100)}`));
+  }
+
+  const story = $("#story-content");
+  if (story && clean(current.historyText, 5000)) {
+    story.replaceChildren(...clean(current.historyText, 5000).split(/\n\s*\n/).filter(Boolean).map((paragraph) => {
+      const element = document.createElement("p");
+      element.textContent = paragraph;
+      return element;
+    }));
+  }
+
+  const address = clean(current.address, 300);
+  const addressLines = address.split(/\r?\n/).filter(Boolean);
+  setText("#site-location-address", address);
+  setText("#site-footer-address", addressLines.slice(0, 2).join("\n"));
+  setText("#site-hero-hours", current.openingHours);
+  setText("#site-hero-address", addressLines.slice(0, 2).join(" · "));
+
+  const orderPhone = formatPhone(current.whatsapp);
+  const eventsPhone = formatPhone(current.eventsWhatsapp);
+  const landline = formatPhone(current.phone);
+  setValues("order-phone", orderPhone);
+  setValues("events-phone", eventsPhone);
+  setValues("phone", landline);
+  setLinks("order", whatsappUrl(current.whatsapp, ORDER_TEXT));
+  setLinks("events", whatsappUrl(current.eventsWhatsapp, EVENT_TEXT));
+  $$('[data-site-link="events-phone"]').forEach((link) => { link.href = `tel:+${phoneDigits(current.eventsWhatsapp)}`; });
+  $$('[data-site-link="phone"]').forEach((link) => { link.href = `tel:+${phoneDigits(current.phone)}`; });
+  setLinks("aiqfome", current.aiqfomeUrl);
+  setLinks("instagram", current.instagramUrl);
+  setLinks("facebook", current.facebookUrl);
+
+  const structured = $('script[type="application/ld+json"]');
+  if (structured) {
+    try {
+      const data = JSON.parse(structured.textContent);
+      data.telephone = current.phone;
+      data.address.streetAddress = addressLines[0] || data.address.streetAddress;
+      data.sameAs = [safeUrl(current.instagramUrl), safeUrl(current.facebookUrl)].filter(Boolean);
+      structured.textContent = JSON.stringify(data);
+    } catch (_) {}
+  }
+}
+
+function mediaForProduct(item) {
+  const imageUrl = safeUrl(item.imageUrl, { allowDataImage: true });
+  const videoUrl = safeUrl(item.videoUrl);
+  if (!imageUrl && !videoUrl) return null;
+  const holder = document.createElement("div");
+  holder.className = "product-media";
+  if (imageUrl) {
+    const image = document.createElement("img");
+    image.src = imageUrl;
+    image.alt = clean(item.name, 100);
+    image.loading = "lazy";
+    image.decoding = "async";
+    holder.append(image);
+  }
+  if (videoUrl) {
+    const directVideo = item.videoMediaId || /\.(?:mp4|webm)(?:$|[?#])/i.test(videoUrl);
+    if (directVideo) {
+      const video = document.createElement("video");
+      video.src = videoUrl;
+      video.controls = true;
+      video.preload = "metadata";
+      video.playsInline = true;
+      video.setAttribute("aria-label", `Vídeo de ${clean(item.name, 100)}`);
+      holder.append(video);
+    } else {
+      const link = document.createElement("a");
+      link.href = videoUrl;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.className = "product-video-link";
+      link.textContent = "Assistir ao vídeo ↗";
+      holder.append(link);
+    }
+  }
+  return holder;
+}
+
+function priceGrid(item) {
+  const prices = document.createElement("div");
+  prices.className = "prices";
+  (Array.isArray(item.prices) ? item.prices : []).slice(0, 12).forEach((entry) => {
+    const row = document.createElement("div");
+    const label = document.createElement("span");
+    const value = document.createElement("strong");
+    label.textContent = clean(entry?.label, 80) || "Preço";
+    value.textContent = money(entry?.value);
+    row.append(label, value);
+    prices.append(row);
+  });
+  return prices;
+}
+
+function productCard(item, compact = false) {
+  const article = document.createElement("article");
+  article.className = compact ? "drink-card product-card" : "pizza-card product-card";
+  const media = mediaForProduct(item);
+  if (media) article.append(media);
+  const title = document.createElement("h3");
+  title.textContent = clean(item.name, 100);
+  article.append(title);
+  if (clean(item.description)) {
+    const description = document.createElement("p");
+    description.className = "ingredients";
+    description.textContent = clean(item.description, 1000);
+    article.append(description);
+  }
+  article.append(priceGrid(item));
+  const order = document.createElement("a");
+  order.className = "pizza-order";
+  order.href = whatsappUrl(state.content.whatsapp, clean(item.orderMessage, 300) || `Olá! Quero pedir ${clean(item.name, 100)} na Capannone.`);
+  order.target = "_blank";
+  order.rel = "noopener noreferrer";
+  order.textContent = compact ? "Incluir no pedido ↗" : "Pedir este item ↗";
+  article.append(order);
+  return article;
+}
+
+function renderMenu(tab = state.activeTab) {
+  state.activeTab = tab;
+  const content = $("#menu-content");
+  if (!content) return;
+  const items = state.products
+    .filter((item) => item.active !== false && item.category === tab)
+    .sort((a, b) => number(a.sortOrder, 9999) - number(b.sortOrder, 9999) || clean(a.name).localeCompare(clean(b.name), "pt-BR"));
+  if (!items.length) {
+    const empty = document.createElement("p");
+    empty.className = "menu-empty";
+    empty.textContent = `Nenhum item disponível em ${CATEGORY_LABELS[tab] || "esta categoria"} no momento.`;
+    content.replaceChildren(empty);
+    return;
+  }
+  const holder = document.createElement("div");
+  const compact = !["pizzas", "promocoes"].includes(tab);
+  holder.className = compact ? "drinks-grid products-grid" : "pizza-grid products-grid";
+  holder.append(...items.map((item) => productCard(item, compact)));
+  content.replaceChildren(holder);
+}
+
+function campaignIsVisible(item, now = Date.now()) {
+  if (!["active", "scheduled"].includes(item.status)) return false;
+  const start = item.startAt ? Date.parse(item.startAt) : NaN;
+  const end = item.endAt ? Date.parse(item.endAt) : NaN;
+  if (item.status === "scheduled" && (!Number.isFinite(start) || start > now)) return false;
+  if (Number.isFinite(start) && start > now) return false;
+  if (Number.isFinite(end) && end <= now) return false;
+  return true;
+}
+
+function discountLabel(item) {
+  const value = number(item.discountValue);
+  if (["percent", "percentage"].includes(item.discountType) && value > 0) return `${value}% DE DESCONTO`;
+  if (item.discountType === "fixed" && value > 0) return `${money(value)} DE DESCONTO`;
+  if (item.discountType === "special_price" && value > 0) return `PREÇO ESPECIAL: ${money(value)}`;
+  return "NOVIDADE DA CASA";
+}
+
+function campaignCard(item, productsById) {
+  const article = document.createElement("article");
+  article.className = "campaign-card";
+  const source = safeUrl(item.imageUrl, { allowDataImage: true });
+  if (source) {
+    const image = document.createElement("img");
+    image.src = source;
+    image.alt = clean(item.title, 100) || "Campanha Capannone";
+    image.loading = "lazy";
+    image.decoding = "async";
+    article.append(image);
+  } else {
+    article.classList.add("campaign-card-no-image");
+  }
+  const body = document.createElement("div");
+  const label = document.createElement("span");
+  label.textContent = discountLabel(item);
+  const title = document.createElement("h3");
+  title.textContent = clean(item.title, 100) || "Novidade Capannone";
+  const description = document.createElement("p");
+  description.textContent = clean(item.description, 1000) || "Confira esta novidade da Capannone.";
+  body.append(label, title, description);
+  const linkedProducts = (Array.isArray(item.productIds) ? item.productIds : []).map((id) => productsById.get(id)?.name).filter(Boolean);
+  if (linkedProducts.length) {
+    const products = document.createElement("small");
+    products.className = "campaign-products";
+    products.textContent = `Inclui: ${linkedProducts.join(", ")}`;
+    body.append(products);
+  }
+  const link = document.createElement("a");
+  link.href = whatsappUrl(state.content.whatsapp, `Olá! Vi a campanha “${clean(item.title, 100)}” e quero saber mais.`);
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = "Quero saber mais ↗";
+  body.append(link);
+  article.append(body);
+  return article;
+}
+
+function renderCampaigns({ authoritative = false } = {}) {
+  const grid = $("#campaigns-grid");
+  const hint = $("#campaignHint");
+  if (!grid) return;
+  const productsById = new Map(state.products.map((item) => [item.id, item]));
+  const visible = state.campaigns
+    .filter((item) => campaignIsVisible(item))
+    .sort((a, b) => number(b.priority) - number(a.priority) || clean(b.startAt).localeCompare(clean(a.startAt)))
+    .slice(0, 8);
+  if (visible.length) {
+    grid.replaceChildren(...visible.map((item) => campaignCard(item, productsById)));
+    if (hint) hint.textContent = "Campanhas exibidas automaticamente conforme o período definido pela equipe.";
+  } else if (authoritative) {
+    grid.replaceChildren();
+    if (hint) hint.textContent = "Não há campanhas ativas no momento. Acompanhe nossas redes para novidades.";
+  }
+}
+
+async function loadManagedContent() {
+  try {
+    const [contentSnapshot, productSnapshot, campaignSnapshot] = await Promise.all([
+      getDoc(doc(db, "siteContent", "home")),
+      getDocs(collection(db, "menuItems")),
+      getDocs(collection(db, "campaigns"))
+    ]);
+    const initialized = contentSnapshot.exists();
+    if (initialized) applySiteContent(contentSnapshot.data());
+    if (productSnapshot.size || initialized) {
+      state.products = productSnapshot.docs.map((snapshot) => ({ id: snapshot.id, ...snapshot.data() }));
+      renderMenu();
+    }
+    state.campaigns = campaignSnapshot.docs.map((snapshot) => ({ id: snapshot.id, ...snapshot.data() }));
+    renderCampaigns({ authoritative: initialized });
+  } catch (_) {
+    // O conteúdo padrão já está renderizado; uma indisponibilidade externa não esvazia o site.
+  }
+}
+
+function wireInterface() {
+  const year = $("#year");
+  if (year) year.textContent = new Date().getFullYear();
+  $$('[data-menu-tab]').forEach((button) => {
+    button.addEventListener("click", () => {
+      $$('[data-menu-tab]').forEach((item) => {
+        const selected = item === button;
+        item.classList.toggle("active", selected);
+        item.setAttribute("aria-selected", String(selected));
+      });
+      renderMenu(button.dataset.menuTab);
+    });
+  });
+}
+
+applySiteContent(DEFAULT_SITE_CONTENT);
+wireInterface();
 renderMenu();
-document.querySelectorAll("[data-menu-tab]").forEach((button) => {
-button.addEventListener("click", () => {
-document.querySelectorAll("[data-menu-tab]").forEach((item) => {
-const selected = item === button;
-item.classList.toggle("active", selected);
-item.setAttribute("aria-selected", String(selected));
-});
-renderMenu(button.dataset.menuTab);
-});
-});
-loadCampaigns();
-loadStory();
-});
+loadManagedContent();
