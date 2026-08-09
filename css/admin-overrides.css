@@ -1,1 +1,2 @@
 .admin-divider{border-top:1px solid var(--line);margin:31px 0 25px}.history-actions{display:flex;align-items:center;justify-content:space-between;gap:12px}.history-actions .button{margin-top:0}@media(max-width:700px){.history-actions{align-items:flex-start;flex-direction:column}.history-actions .button{width:100%}}
+.gallery-admin-section{margin-top:56px;padding-top:44px;border-top:1px solid var(--line)}

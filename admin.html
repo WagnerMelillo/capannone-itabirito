@@ -14,7 +14,7 @@
 <body class="admin-page">
 <header class="utility-header wrap">
   <a class="utility-logo" href="index.html">
-    <img src="assets/brand/logo.webp" alt="Capannone Casa das Massas">
+    <img src="assets/brand/logo.webp" alt="Capannone Casa das Massas" width="648" height="220">
   </a>
   <a href="index.html">Ver site</a>
 </header>
@@ -26,7 +26,7 @@
     <p>Entre com o PIN de administração para incluir ou remover os destaques que aparecem no site.</p>
     <label for="pin">PIN de administração</label>
     <div class="pin-row">
-      <input id="pin" type="password" placeholder="Digite o PIN">
+      <input id="pin" type="password" placeholder="Digite o PIN" maxlength="128" autocomplete="off" autocapitalize="none" spellcheck="false">
       <button class="button button-order" id="login-button" type="button">Entrar</button>
     </div>
     <p class="form-message" id="login-message" role="status"></p>
@@ -47,13 +47,13 @@
         <p>Use uma imagem leve e uma chamada curta. Ela ficará visível na seção de novidades do site.</p>
 
         <label for="campaign-title">Título</label>
-        <input id="campaign-title" placeholder="Ex.: Quinta da pizza em família">
+        <input id="campaign-title" placeholder="Ex.: Quinta da pizza em família" maxlength="80" required>
 
         <label for="campaign-description">Mensagem</label>
-        <input id="campaign-description" placeholder="Ex.: Uma noite gostosa começa com uma pizza quentinha.">
+        <input id="campaign-description" placeholder="Ex.: Uma noite gostosa começa com uma pizza quentinha." maxlength="500">
 
         <label for="campaign-image">Imagem (JPG, PNG ou WebP · até 5 MB)</label>
-        <input id="campaign-image" type="file" accept="image/jpeg,image/png,image/webp">
+        <input id="campaign-image" type="file" accept="image/jpeg,image/png,image/webp" required>
         <img class="image-preview" id="image-preview" alt="Prévia da campanha" hidden>
 
         <button class="button button-dark" type="submit">Publicar campanha</button>
@@ -64,7 +64,7 @@
         <h2>Breve história</h2>
         <p>Esse texto aparece na seção “A Capannone” do site.</p>
         <label for="history-text">Texto</label>
-        <textarea id="history-text" placeholder="Conte a história da Capannone em um ou dois parágrafos."></textarea>
+        <textarea id="history-text" placeholder="Conte a história da Capannone em um ou dois parágrafos." maxlength="5000"></textarea>
         <div class="history-actions">
           <button class="button" id="history-load" type="button">Carregar atual</button>
           <button class="button button-dark" id="history-save" type="button">Salvar história</button>
@@ -85,9 +85,50 @@
         </div>
       </div>
     </div>
+
+    <section class="gallery-admin-section" id="gallery-admin-panel">
+      <div class="admin-heading">
+        <div>
+          <p class="eyebrow">FOTOS DO ESPAÇO</p>
+          <h1>Galeria do Espaço Capannone</h1>
+        </div>
+      </div>
+      <p class="form-message" id="gallery-connection-message" role="status"></p>
+
+      <div class="admin-columns">
+        <form class="admin-form" id="gallery-upload-form">
+          <h2>Nova foto</h2>
+          <p>Fotos grandes são redimensionadas automaticamente antes de salvar.</p>
+
+          <label for="gallery-image">Imagem (JPG, PNG ou WebP)</label>
+          <input id="gallery-image" type="file" accept="image/jpeg,image/png,image/webp" required>
+          <img class="image-preview" id="gallery-image-preview" alt="Prévia da foto" hidden>
+
+          <label for="gallery-caption">Legenda (opcional)</label>
+          <input id="gallery-caption" placeholder="Ex.: Mezanino para grupos maiores" maxlength="240">
+
+          <button class="button button-dark" type="submit">Publicar foto</button>
+          <p class="form-message" id="gallery-upload-message" role="status"></p>
+        </form>
+
+        <div class="campaign-manager">
+          <div class="manager-heading">
+            <div>
+              <h2>Fotos no site</h2>
+              <p>As fotos aparecem na galeria pública do espaço (espaco-fotos.html).</p>
+            </div>
+            <button class="text-button" id="gallery-refresh-button" type="button">Atualizar</button>
+          </div>
+          <div class="admin-campaigns" id="gallery-admin-list">
+            <p class="empty-state">Carregando fotos…</p>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </main>
 
 <script src="js/admin.js" defer></script>
+<script type="module" src="js/admin-gallery.js"></script>
 </body>
 </html>

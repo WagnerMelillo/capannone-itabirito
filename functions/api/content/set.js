@@ -1,19 +1,39 @@
-function json(body, status=200){
+function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff"
+    }
   });
 }
 
+async function secureEqual(value, expected) {
+  const encoder = new TextEncoder();
+  const [left, right] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(value)),
+    crypto.subtle.digest("SHA-256", encoder.encode(expected))
+  ]);
+  const a = new Uint8Array(left);
+  const b = new Uint8Array(right);
+  let difference = 0;
+  for (let index = 0; index < a.length; index += 1) difference |= a[index] ^ b[index];
+  return difference === 0;
+}
+
 export async function onRequestPost({ request, env }) {
+  const expected = typeof env.ADMIN_PIN === "string" ? env.ADMIN_PIN.trim() : "";
+  if (!expected || !env.CAMPAIGNS_KV) return json({ error: "Serviço não configurado." }, 503);
+
   const pin = request.headers.get("X-Admin-Pin") || "";
-  const expected = env.ADMIN_PIN || "0502";
-  if (String(pin) !== String(expected)) return json({ error: "Não autorizado." }, 401);
+  if (!(await secureEqual(pin, expected))) return json({ error: "Não autorizado." }, 401);
 
   const { key, value } = await request.json().catch(() => ({}));
-  if(!key) return json({ error: "Chave ausente." }, 400);
+  if (key !== "history") return json({ error: "Chave inválida." }, 400);
+  const text = String(value ?? "").trim();
+  if (text.length > 5000) return json({ error: "Texto muito longo." }, 413);
 
-  const kvKey = `content:${key}`;
-  await env.CAMPAIGNS_KV?.put(kvKey, String(value ?? ""));
+  await env.CAMPAIGNS_KV.put("content:history", text);
   return json({ ok: true, key });
 }

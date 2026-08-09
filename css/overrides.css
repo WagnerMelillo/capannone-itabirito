@@ -1,1 +1,7 @@
 #story-content p{color:var(--muted);font-size:16px;max-width:650px;margin:0 0 17px}
+.gallery-teaser{display:flex;align-items:center;gap:14px;background:var(--sand);border:1px solid rgba(23,61,45,.12);border-radius:14px;padding:16px 18px;text-decoration:none;color:inherit;margin:22px 0}
+.gallery-teaser-icon{font-size:20px;line-height:1;flex:none;color:var(--forest)}
+.gallery-teaser strong{display:block;font-size:15px;color:var(--ink)}
+.gallery-teaser small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.gallery-teaser b{margin-left:auto;color:var(--tomato);font-size:18px;flex:none}
+.gallery-teaser:hover{background:#efe6d3}

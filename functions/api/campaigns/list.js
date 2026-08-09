@@ -1,7 +1,16 @@
 export async function onRequestGet({ env }) {
-  const raw = await env.CAMPAIGNS_KV?.get("campaigns");
-  const items = raw ? JSON.parse(raw) : [];
+  let items = [];
+  try {
+    const raw = await env.CAMPAIGNS_KV?.get("campaigns");
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(parsed)) items = parsed.slice(0, 100);
+  } catch (_) {}
+
   return new Response(JSON.stringify({ items }), {
-    headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff"
+    }
   });
 }

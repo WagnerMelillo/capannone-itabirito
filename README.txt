@@ -1,16 +1,12 @@
-Capannone Itabirito — Site estático + admin (Cloudflare Pages + KV + R2)
+Capannone Itabirito — site estático (Cloudflare Pages) + painel admin (Cloudflare Worker + KV)
 
-Arquivos principais:
-- index.html (site)
-- portal.html (portal Wi‑Fi opcional)
-- admin.html (admin de campanhas/eventos)
+Para o passo a passo completo, arquitetura, como publicar alterações e como acessar o
+painel admin, veja o arquivo ESTRUTURA-DO-SITE.md nesta mesma pasta.
 
-Para o admin funcionar:
-1) Cloudflare Pages (Framework: None)
-2) Crie 1 KV e 1 R2
-3) Faça bindings:
-   - CAMPAIGNS_KV (KV)
-   - CAMPAIGNS_BUCKET (R2)
-4) Variável de ambiente: ADMIN_PIN=0502
-
-Localmente, a galeria de campanhas mostra placeholders (prévia).
+Resumo rápido:
+- Site publicado em: www.capannone.dasmmelhores.com
+- Código-fonte (branch main) = o que está publicado. Deploy é automático via Cloudflare Pages.
+- Campanhas e o texto "A Capannone" são servidos por um Cloudflare Worker separado
+  (capannone-itabirito-api), com dados guardados em KV. Não há R2 em uso.
+- O PIN do painel admin fica em um Secret do Worker (não no Pages). Veja a seção 8 de
+  ESTRUTURA-DO-SITE.md para saber onde trocá-lo com segurança.
