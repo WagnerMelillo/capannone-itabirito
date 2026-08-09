@@ -1,5 +1,5 @@
 const PROJECT_ID = "capannone-itabirito";
-const SUPERADMIN_UID = "unHjEmB7jXPGTXhvc2mFB9Iht3h1";
+const SUPERADMIN_UID = "n7YwMAtBWrZmQUkTwfDQr5mnQsB2";
 const TOKEN_ISSUER = `https://securetoken.google.com/${PROJECT_ID}`;
 const FIREBASE_JWKS = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
 const FIRESTORE_USERS = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/users`;
