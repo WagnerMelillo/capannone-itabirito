@@ -3,7 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function ownerUid() {
-      return 'unHjEmB7jXPGTXhvc2mFB9Iht3h1';
+      return 'n7YwMAtBWrZmQUkTwfDQr5mnQsB2';
     }
 
     function signedIn() {

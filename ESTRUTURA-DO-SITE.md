@@ -27,7 +27,7 @@ O navegador público lê conteúdo liberado pelas regras do Firestore. As grava�
 
 ### Super-administrador
 
-- O único perfil autorizado como `superadmin` pertence a `magnamelillo@gmail.com`.
+- O único perfil autorizado como `superadmin` pertence a Wagner Melillo (`wagnermelillo@gmail.com`).
 - Pode editar todo o conteúdo e gerenciar usuários.
 - Pode credenciar pessoas, remover ou restaurar acesso e exigir nova senha no próximo acesso.
 - As regras impedem a criação de um segundo super-administrador pelo painel.

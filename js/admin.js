@@ -25,8 +25,8 @@ import {
 import { firebaseConfig } from "./firebase-config.js";
 import { CATEGORY_LABELS, DEFAULT_MENU_ITEMS, DEFAULT_SITE_CONTENT, MEDIA_API } from "./default-content.js";
 
-const SUPERADMIN_UID = "unHjEmB7jXPGTXhvc2mFB9Iht3h1";
-const SUPERADMIN_EMAIL = "magnamelillo@gmail.com";
+const SUPERADMIN_UID = "n7YwMAtBWrZmQUkTwfDQr5mnQsB2";
+const SUPERADMIN_EMAIL = "wagnermelillo@gmail.com";
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
