@@ -5,7 +5,6 @@ import {
   deleteUser,
   getAuth,
   onAuthStateChanged,
-  sendPasswordResetEmail,
   setPersistence,
   signInWithEmailAndPassword,
   signOut,
@@ -460,7 +459,7 @@ function renderUsers() {
     content.append(title, description, meta);
     const actions = document.createElement("div"); actions.className = "list-card-actions";
     if (!isOwner) {
-      actions.append(actionButton("Enviar redefinição", "reset-user", item.id), actionButton("Exigir nova senha", "require-password", item.id), actionButton(item.active ? "Remover acesso" : "Restaurar acesso", "toggle-user", item.id, item.active ? "danger" : ""));
+      actions.append(actionButton("Exigir troca no próximo acesso", "require-password", item.id), actionButton(item.active ? "Remover acesso" : "Restaurar acesso", "toggle-user", item.id, item.active ? "danger" : ""));
     }
     card.append(content, actions); return card;
   }));
@@ -643,9 +642,6 @@ async function handleGalleryAction(button) {
 async function handleUserAction(button) {
   if (!isSuperadmin()) return;
   const item = state.users.find((entry) => entry.id === button.dataset.id); if (!item || item.id === SUPERADMIN_UID) return;
-  if (button.dataset.action === "reset-user") {
-    button.disabled = true; await sendPasswordResetEmail(auth, item.email); await audit("password-reset-request", "user", item.id); toast("E-mail de redefinição enviado."); return;
-  }
   if (button.dataset.action === "require-password") {
     button.disabled = true; await updateDoc(doc(db, "users", item.id), { mustChangePassword: true, updatedAt: nowIso(), updatedBy: auth.currentUser.uid }); item.mustChangePassword = true; await audit("require-password-change", "user", item.id); renderUsers(); toast("A troca de senha será obrigatória no próximo acesso."); return;
   }
@@ -687,11 +683,6 @@ function wireUi() {
     try { await signInWithEmailAndPassword(auth, clean($("#login-email").value, 200).toLowerCase(), $("#login-password").value); event.target.reset(); }
     catch (error) { setMessage("#login-message", friendlyError(error), "error"); }
     finally { button.disabled = false; }
-  });
-  $("#forgot-password-button").addEventListener("click", async () => {
-    const email = clean($("#login-email").value, 200).toLowerCase(); if (!email) return setMessage("#login-message", "Digite seu e-mail primeiro.", "error");
-    try { await sendPasswordResetEmail(auth, email); setMessage("#login-message", "Enviamos um link de redefinição para este e-mail.", "success"); }
-    catch (error) { setMessage("#login-message", friendlyError(error), "error"); }
   });
   $("#password-form").addEventListener("submit", async (event) => {
     event.preventDefault(); const password = $("#new-password").value; const confirmation = $("#confirm-password").value;
