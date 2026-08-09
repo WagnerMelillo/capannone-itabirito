@@ -677,7 +677,70 @@ function wirePreview(inputSelector, previewSelector) {
   });
 }
 
+function enableTemporaryPasswordReveal() {
+  $$('input[type="password"]').forEach((input) => {
+    if (input.closest(".password-control")) return;
+
+    const control = document.createElement("div");
+    control.className = "password-control";
+    input.parentNode.insertBefore(control, input);
+    control.append(input);
+
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "password-reveal";
+    button.setAttribute("aria-label", "Manter pressionado para visualizar a senha");
+    button.setAttribute("aria-controls", input.id);
+    button.setAttribute("aria-pressed", "false");
+    button.title = "Mantenha pressionado para visualizar a senha";
+    button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2.5 12s3.4-5.5 9.5-5.5 9.5 5.5 9.5 5.5-3.4 5.5-9.5 5.5S2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.7"/><path class="password-reveal-slash" d="M4 4l16 16"/></svg>';
+
+    const reveal = () => {
+      input.type = "text";
+      button.classList.add("is-revealing");
+      button.setAttribute("aria-pressed", "true");
+    };
+    const conceal = () => {
+      input.type = "password";
+      button.classList.remove("is-revealing");
+      button.setAttribute("aria-pressed", "false");
+    };
+
+    button.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      button.setPointerCapture?.(event.pointerId);
+      reveal();
+    });
+    ["pointerup", "pointercancel", "pointerleave", "lostpointercapture"].forEach((eventName) => {
+      button.addEventListener(eventName, conceal);
+    });
+    button.addEventListener("keydown", (event) => {
+      if (event.key !== " " && event.key !== "Enter") return;
+      event.preventDefault();
+      reveal();
+    });
+    button.addEventListener("keyup", (event) => {
+      if (event.key !== " " && event.key !== "Enter") return;
+      event.preventDefault();
+      conceal();
+    });
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      conceal();
+    });
+    button.addEventListener("blur", conceal);
+    input.addEventListener("blur", conceal);
+    window.addEventListener("blur", conceal);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) conceal();
+    });
+
+    control.append(button);
+  });
+}
+
 function wireUi() {
+  enableTemporaryPasswordReveal();
   $("#login-form").addEventListener("submit", async (event) => {
     event.preventDefault(); const button = event.submitter; button.disabled = true; setMessage("#login-message", "Entrando…");
     try { await signInWithEmailAndPassword(auth, clean($("#login-email").value, 200).toLowerCase(), $("#login-password").value); event.target.reset(); }
