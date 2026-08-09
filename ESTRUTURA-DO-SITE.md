@@ -116,7 +116,7 @@ As chaves presentes em `js/firebase-config.js` identificam o projeto cliente e s
 
 ## 9. Wi-Fi no local
 
-O site não oferece portal de autenticação de Wi-Fi. A disponibilidade da rede é informada discretamente no rodapé como conveniência para acessar o próprio site e o cardápio durante a visita.
+O site não oferece portal de autenticação de Wi-Fi. A disponibilidade da rede é informada discretamente no rodapé como conveniência para acessar o próprio site e o cardápio durante a visita. Os endereços antigos do portal apenas redirecionam para o cardápio, evitando que favoritos ou QR codes antigos abram conteúdo obsoleto.
 
 ## 10. Operação do painel
 
