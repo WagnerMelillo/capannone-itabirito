@@ -1,156 +1,134 @@
-# Capannone Itabirito — Estrutura do site
+# Capannone Itabirito — arquitetura e operação
 
-Documento de referência sobre como o site funciona, onde cada peça está hospedada e como fazer alterações com segurança. Escrito em 24/07/2026 depois de recuperar o acesso e sincronizar esta pasta com o que está publicado em produção.
+Referência atualizada em 08/08/2026 após a reforma do painel administrativo e a auditoria de segurança.
 
-## 1. Visão geral
+## 1. Fonte da verdade e hospedagem
 
-O site é estático (HTML/CSS/JS puro, sem build). Ele é hospedado no Cloudflare Pages e tem uma parte dinâmica (campanhas e o texto "A Capannone") que é atendida por um Cloudflare Worker separado, com dados guardados em uma KV (banco chave-valor do Cloudflare).
+- Site oficial: `https://capannone.dasmmelhores.com/`.
+- Hospedagem ativa: Cloudflare Pages, projeto `capannone-itabirito`.
+- Repositório: `WagnerMelillo/capannone-itabirito`.
+- Branch de produção: `main`.
+- O Pages publica automaticamente cada commit aceito em `main`.
+- O projeto Firebase possui um site de Hosting cadastrado, mas ele retorna “Site Not Found” e não é a hospedagem oficial.
 
-Domínio publicado: **www.capannone.dasmmelhores.com** (e capannone.dasmmelhores.com).
+## 2. Arquitetura
 
-Fonte da verdade do código: **repositório GitHub `WagnerMelillo/capannone-itabirito`, branch `main`**. Qualquer alteração publicada precisa passar por esse branch — é ele que o Cloudflare Pages usa para gerar o site ao vivo automaticamente.
-
-## 2. Onde cada peça está hospedada (conta Cloudflare)
-
-| Peça | Onde fica | Nome/identificação |
+| Responsabilidade | Serviço | Identificação |
 |---|---|---|
-| Site estático | Cloudflare Pages | Projeto `capannone-itabirito` |
-| Backend de campanhas/história | Cloudflare Workers | Worker `capannone-itabirito-api` |
-| Dados das campanhas e do texto "A Capannone" | Cloudflare KV | Binding `CAPANNONE_DATA` (dentro do Worker acima) |
-| PIN do painel admin | Secret do Worker | `ADMIN_PIN` (Workers e Pages → capannone-itabirito-api → Configurações → Variáveis e segredos) |
-| DNS do domínio | Cloudflare DNS | Zona `dasmmelhores.com`, registro CNAME `capannone` apontando para o projeto Pages |
-| Código-fonte | GitHub | `WagnerMelillo/capannone-itabirito`, branch `main` |
+| HTML, CSS, JavaScript e assets estáticos | Cloudflare Pages | `capannone-itabirito` |
+| Login individual | Firebase Authentication | projeto `capannone-itabirito` |
+| Perfis, conteúdo, cardápio, campanhas e galeria | Cloud Firestore | banco `(default)`, região `nam5` |
+| Imagens e vídeos enviados pelo painel | Cloudflare Worker + KV | Worker `capannone-itabirito-api`, binding `CAPANNONE_DATA` |
+| DNS | Cloudflare DNS | zona `dasmmelhores.com` |
 
-Importante: a mesma conta Cloudflare provavelmente tem outros Workers/registros DNS de outros projetos seus. Nenhum deles foi tocado durante esta organização — mexa apenas nos itens listados acima quando for editar a Capannone.
+O navegador público lê conteúdo liberado pelas regras do Firestore. As gravações exigem uma conta ativa com perfil `admin` ou `superadmin` e senha definitiva. O Worker de mídia valida o token Firebase e o perfil no Firestore antes de aceitar upload ou exclusão.
 
-**Pages x Worker — não confunda:** o painel do Pages (`capannone-itabirito`) tem uma variável de ambiente `ADMIN_PIN` que ficou configurada lá de um teste antigo, mas ela **não é usada** pelo site. O PIN de verdade mora no **Secret do Worker**. Se um dia o login do admin parar de funcionar, o lugar certo para checar/trocar o PIN é sempre no Worker, não no Pages.
+## 3. Acessos
 
-## 3. Como o deploy acontece
+### Super-administrador
 
-O Cloudflare Pages está conectado ao GitHub e faz deploy automático sempre que o branch `main` recebe um novo commit. O comando de build é `exit 0` (não há build — os arquivos são publicados como estão). Ou seja:
+- Existe um único perfil autorizado como `superadmin`.
+- Pode editar todo o conteúdo e gerenciar usuários.
+- Pode criar administradores, bloquear ou reativar acesso, enviar redefinição de senha e exigir nova senha.
+- As regras impedem a criação de um segundo super-administrador pelo painel.
 
-1. Você edita um arquivo (localmente ou pelo site do GitHub).
-2. O arquivo é commitado no branch `main`.
-3. O Cloudflare Pages detecta o commit e publica automaticamente em alguns segundos/minutos.
-4. O site em www.capannone.dasmmelhores.com atualiza sozinho — não é preciso fazer nada manual no Cloudflare.
+### Administrador de marketing
 
-**Cuidado:** nunca clique em "Tentar implantar novamente"/"Retry deployment" de um deploy antigo no Cloudflare Pages sem checar antes qual commit ele vai reconstruir — isso pode publicar uma versão desatualizada do `main` por cima da atual.
+- Usa e-mail e senha próprios.
+- Ao receber uma senha provisória, precisa criar uma senha definitiva no primeiro acesso.
+- Pode alterar conteúdo, fotos, vídeos, preços, cardápio, campanhas e galeria.
+- Não pode listar ou gerenciar usuários e senhas.
 
-## 4. Estrutura de arquivos desta pasta
+O antigo acesso por credencial compartilhada foi aposentado. A senha Firebase de um usuário não depende de nenhum segredo do Worker.
 
+## 4. Conteúdo gerenciado
+
+Coleções/documentos principais do Firestore:
+
+- `siteContent/home`: textos, contatos, links e imagens institucionais.
+- `menuItems`: pizzas, bebidas, promoções, preços, ordem, visibilidade, foto, vídeo e mensagem de pedido.
+- `campaigns`: título, descrição, situação, prioridade, período, desconto, produtos relacionados e imagem.
+- `espaco_fotos`: galeria pública do espaço para eventos. Os dois registros antigos em base64 continuam compatíveis; novos uploads usam URL de mídia.
+- `users`: perfil, papel, situação e obrigação de troca de senha.
+- `auditLogs`: trilha das ações administrativas.
+
+O `js/default-content.js` preserva um baseline local do conteúdo e do cardápio. Se o Firebase estiver temporariamente indisponível antes da inicialização do banco, o cliente continua vendo o conteúdo essencial.
+
+## 5. Arquivos principais
+
+```text
+index.html                    página pública
+admin.html                    painel administrativo responsivo
+portal.html                   página atual do Wi-Fi
+espaco-fotos.html             galeria pública
+js/site.js                    leitura e renderização do conteúdo público
+js/admin.js                   autenticação, permissões e operações do painel
+js/default-content.js         baseline local e constantes compartilhadas
+js/firebase-config.js         configuração pública do projeto Firebase
+js/espaco-fotos.js            leitura compatível da galeria
+js/portal.js                  aceite e redirecionamento do portal atual
+worker/media-api.js           Worker autenticado para imagens e vídeos
+firestore.rules               regras de acesso do banco
+firebase.json                 configuração somente do Firestore
+wrangler.toml                 configuração versionada do Worker
+_headers                      cabeçalhos de segurança do Pages
 ```
-Site_Capannone/
-├── index.html              → Página principal do site
-├── portal.html             → Portal de Wi-Fi do cliente (link "Wi-Fi" no site)
-├── admin.html               → Painel administrativo (campanhas + texto "A Capannone")
-├── espaco-fotos.html        → Galeria pública do espaço para eventos
-├── 404.html                 → Página real de erro para endereços inexistentes
-├── _headers                 → Cabeçalhos de segurança aplicados pelo Cloudflare Pages
-├── robots.txt / sitemap.xml → Indexação e mapa do site
-├── README.txt               → Resumo rápido, aponta para este documento
-├── ESTRUTURA-DO-SITE.md      → Este documento
-├── css/
-│   ├── site.css              → Estilo principal (cores, layout, cardápio, hero, etc.)
-│   ├── overrides.css         → Pequenos ajustes específicos da seção "A Capannone"
-│   ├── utility.css           → Estilo do portal Wi-Fi e do painel admin
-│   ├── admin-overrides.css   → Ajustes finos exclusivos do painel admin
-│   └── gallery.css           → Estilo da galeria pública
-├── js/
-│   ├── site.js               → Cardápio, pedidos, carrega campanhas e o texto "A Capannone"
-│   ├── portal.js             → Lógica do botão "Liberar Wi-Fi"
-│   ├── admin.js              → Login do admin, publicar campanha, editar texto "A Capannone"
-│   ├── firebase-config.js    → Configuração pública do projeto Firebase
-│   ├── espaco-fotos.js       → Leitura da galeria pública
-│   └── admin-gallery.js      → Upload e exclusão das fotos do espaço
-├── assets/
-│   ├── brand/                → Logo (jpg e webp)
-│   ├── img/                  → Fotos usadas no site (pares .jpg/.webp)
-│   └── favicon.svg
-├── functions/                → Cloudflare Pages Functions (ver seção 6 — hoje sem uso)
-├── _backup_arquivos_antigos/  → Arquivos de um projeto antigo e não relacionado (ver LEIA-ME dentro da pasta)
-└── _backup_rascunho_antigo/   → Rascunhos/CSS antigo, já substituídos (ver LEIA-ME dentro da pasta)
-```
 
-### O que cada página faz
+Não existe etapa de build. Os módulos JavaScript são carregados diretamente pelo navegador.
 
-- **index.html** — página inicial: hero, cardápio (abas Pizzas/Cervejas/Refrigerantes/Sucos/Promoções, montado pelo `js/site.js`), seção "A Capannone" (texto vindo do Worker), pedidos (WhatsApp/Aiqfome), campanhas em destaque (vindas do Worker), localização (mapa) e rodapé com link discreto para `admin.html`.
-- **portal.html** — página simples de portal de Wi-Fi: checkbox de termos + botão "Liberar Wi-Fi", que redireciona para o Aiqfome do Capannone.
-- **admin.html** — protegida por PIN. Depois de logar, permite publicar/remover campanhas (imagem + título + mensagem) e editar o texto da seção "A Capannone".
+## 6. Worker de mídia
 
-## 5. O backend (Worker) e os dados
+URL: `https://capannone-itabirito-api.wagnermelillo.workers.dev`
 
-Endereço do Worker: `https://capannone-itabirito-api.wagnermelillo.workers.dev`
+Rotas atuais:
 
-Endpoints usados pelo site:
-- `POST /auth` — valida o PIN digitado no admin.
-- `GET /campaigns` — lista campanhas para o index e para o admin.
-- `POST /campaigns` — publica campanha nova (exige o PIN no cabeçalho `X-Admin-Pin`).
-- `DELETE /campaigns/{id}` — remove campanha (exige PIN).
-- `GET /content/history` — busca o texto da seção "A Capannone".
-- `PUT /content/history` — salva o texto da seção "A Capannone" (exige PIN).
+- `GET /health`: estado básico do serviço.
+- `POST /media`: upload autenticado de JPG, PNG, WebP, MP4 ou WebM.
+- `GET|HEAD /media/{id}`: entrega pública da mídia com cache e suporte a intervalo de bytes.
+- `DELETE /media/{id}`: exclusão autenticada.
+- `GET /campaigns`, `GET /content/history` e `GET|HEAD /images/{id}`: leitura temporária compatível com dados antigos em KV.
 
-Todos os dados (campanhas publicadas e o texto da história) ficam guardados na KV `CAPANNONE_DATA`, dentro do Worker. Não há banco de dados externo nem R2 em uso — apesar do que dizia o README antigo.
+Uploads aceitam imagens de até 5 MB e vídeos de até 20 MB. A origem é limitada aos domínios oficiais, previews do Pages e ambiente local. O Worker verifica assinatura do arquivo, assinatura criptográfica do token Firebase, projeto emissor, validade do token e perfil ativo no Firestore.
 
-## 6. Pasta `functions/` — legado não usado pelo frontend, mas ainda publicado
+## 7. Publicação segura
 
-A pasta `functions/api/...` contém código de Cloudflare Pages Functions (`auth.js`, `campaigns/*.js`, `content/*.js`) que faria o mesmo papel do Worker, mas usando caminhos relativos (`/api/...`) dentro do próprio Pages. **O frontend hoje não chama esses arquivos** — `js/site.js` e `js/admin.js` usam diretamente o Worker externo (`capannone-itabirito-api.wagnermelillo.workers.dev`). Mesmo assim, as rotas legadas foram confirmadas como públicas em produção (`/api/campaigns/list` e `/api/content/get`). Por isso o código foi endurecido para falhar fechado sem `ADMIN_PIN`, validar tipos/tamanhos e não aceitar um PIN padrão. A remoção completa deve ocorrer apenas depois de confirmar no painel Cloudflare que nenhum consumidor externo depende dessas rotas.
+1. Trabalhar em branch separado.
+2. Validar sintaxe, regras, links, interface pública e painel.
+3. Publicar a branch e testar a URL de preview do Cloudflare Pages.
+4. Aplicar previamente regras e dependências externas necessárias.
+5. Fazer merge em `main` somente após a prévia passar.
+6. Confirmar o domínio oficial e os endpoints após o deploy.
 
-## 7. Como fazer alterações com segurança
+Para retorno, use o commit de produção anterior no GitHub e a versão anterior do Worker no histórico de implantações do Cloudflare. Regras do Firestore também mantêm histórico no console.
 
-Para qualquer mudança (texto, imagem, CSS, JS):
+## 8. Segurança
 
-1. Edite o arquivo na pasta local `C:\Projetos\Site_Capannone`.
-2. Publique o arquivo no branch `main` do repositório GitHub (`WagnerMelillo/capannone-itabirito`) — por `git push` (se tiver Git configurado com sua conta) ou fazendo upload direto pela interface do GitHub (Add file → Upload files), como foi feito na sincronização mais recente.
-3. Aguarde alguns instantes: o Cloudflare Pages publica sozinho.
-4. Confira o resultado em www.capannone.dasmmelhores.com.
+- Regras Firestore versionadas e compiladas pelo Firebase antes da publicação.
+- Leitura pública limitada ao conteúdo necessário ao site.
+- Escrita limitada a perfis ativos e com troca de senha concluída.
+- Gestão de usuários limitada ao super-administrador fixado nas regras.
+- Cabeçalhos CSP, HSTS, `nosniff`, proteção contra framing e política de permissões em `_headers`.
+- Renderização de dados externos com APIs de DOM, sem injeção de HTML.
+- Validação de URL, MIME, assinatura e tamanho de arquivos.
+- Sessão do painel limitada à aba do navegador.
+- Logs administrativos sem armazenamento de senhas.
+- As antigas Pages Functions administrativas foram removidas para reduzir a superfície de ataque.
 
-Se a mudança for grande ou você quiser testar antes de ir para o público, crie um branch separado (ex.: `teste-alguma-coisa`), suba os arquivos nele e abra um Pull Request — o Cloudflare Pages gera automaticamente uma prévia (preview) daquele branch, com uma URL própria, sem afetar o site ao vivo. Só depois de conferir a prévia, faça o merge para `main`.
+As chaves presentes em `js/firebase-config.js` identificam o projeto cliente e são públicas por definição. A proteção efetiva está nas regras do Firestore, no Firebase Authentication e na validação do Worker.
 
-## 8. Acesso ao painel administrativo
+## 9. Portal Wi-Fi
 
-- URL canônica: `https://capannone.dasmmelhores.com/admin`
-- PIN atual: mantido exclusivamente como Secret do Worker. **Não registre o valor neste arquivo, no Git ou em mensagens.**
-- Para trocar o PIN: Cloudflare → Workers e Pages → `capannone-itabirito-api` → Configurações → Variáveis e segredos → editar (ícone de lápis) o segredo `ADMIN_PIN` → "Girar" (Rotate) → digitar o novo valor → Implantar. Essa troca é imediata, não precisa esperar nenhum deploy.
+O `portal.html` atual mostra termos e, após o aceite, redireciona para o Aiqfome. Não foram encontrados callback, token, endereço de controlador, autorização de MAC, integração RADIUS nem parâmetros de um equipamento de hotspot.
 
-## 9. Pastas de backup
+Portanto, a página não comprova liberação real de rede. Para integrar o hotspot sem adivinhar parâmetros, ainda são necessários fabricante/modelo do controlador, fluxo de captive portal e credenciais/documentação técnica do equipamento. Até isso existir, preserve o fluxo atual para não quebrar o link exibido no site.
 
-- `_backup_arquivos_antigos/` — arquivos de um projeto anterior e não relacionado (um portal de Wi-Fi com login via Instagram, hospedado em outro serviço). Não fazem parte do site atual; guardados apenas por precaução.
-- `_backup_rascunho_antigo/` — CSS de rascunho (`style.css`) que foi substituído por `site.css`/`overrides.css`/`utility.css`/`admin-overrides.css`, e um arquivo temporário usado durante a reconstrução do JS. Podem ser apagados manualmente quando você tiver certeza de que não precisa mais deles (o assistente não conseguiu apagá-los automaticamente por uma restrição do sistema de arquivos desta pasta sincronizada).
+## 10. Operação do painel
 
-## 10. Galeria de fotos do Espaço (Firebase)
+- Acesso: `https://capannone.dasmmelhores.com/admin.html`.
+- Use “Conteúdo do site” para textos, contatos, links e imagens institucionais.
+- Use “Cardápio e preços” para criar, editar, ocultar ou excluir itens.
+- Use “Campanhas” para rascunhar, agendar, ativar ou encerrar ações.
+- Use “Fotos do espaço” para alimentar a galeria pública.
+- “Usuários e acessos” aparece somente para o super-administrador.
 
-A partir de 24/07/2026, o site tem uma galeria de fotos do Espaço Capannone (`espaco-fotos.html`, com um link de destaque em "Locação do espaço" na página inicial). Diferente do restante do site, essa parte usa o **Firebase** (projeto `capannone-itabirito`, conta Google wagnermelillo@gmail.com), não o Cloudflare:
-
-- **Cloud Firestore** — banco de dados onde cada foto é um documento na coleção `espaco_fotos` (imagem em base64 + legenda + data). Console: https://console.firebase.google.com/project/capannone-itabirito/firestore
-- **Authentication (e-mail/senha)** — existe uma única conta técnica (`magnamelillo@gmail.com`) usada só para satisfazer a exigência de login do Firestore. Console: https://console.firebase.google.com/project/capannone-itabirito/authentication/users
-- **Regras de segurança** — qualquer visitante pode ver as fotos; só quem estiver logado nessa conta técnica pode publicar ou remover.
-- **js/firebase-config.js** — configuração pública do projeto (a chave não é secreta; a proteção real são as Regras de Segurança do Firestore).
-- **js/espaco-fotos.js** — carrega e exibe as fotos na página pública.
-- **js/admin-gallery.js** — upload (com redimensionamento automático da imagem) e exclusão, na seção "Fotos do Espaço" dentro de `admin.html`.
-
-**Não existe mais login separado para a galeria.** Desde 24/07/2026 (correção pedida pelo Wagner), a seção "Fotos do Espaço" fica dentro do mesmo painel protegido pelo PIN de campanhas/história — ao entrar em `admin.html` com o PIN, a galeria já aparece pronta para uso. Por trás dos panos, o `admin-gallery.js` usa o próprio PIN digitado como senha para logar automaticamente na conta técnica do Firebase (`magnamelillo@gmail.com`), sem pedir nada a mais da pessoa.
-
-**Isso cria uma dependência importante: a senha da conta técnica no Firebase precisa ser sempre igual ao PIN atual do admin.** Se um dia o PIN for trocado (Secret `ADMIN_PIN` no Worker, seção 8 acima), é preciso também atualizar a senha dessa conta no Firebase para o mesmo valor, senão a galeria mostra a mensagem "Não foi possível conectar a galeria de fotos com o PIN atual" (o restante do admin — campanhas e história — continua funcionando normalmente, só a galeria fica bloqueada até sincronizar).
-
-**Como sincronizar a senha da galeria com o PIN atual:** Firebase Console → Authentication → Users → clique nos "⋮" ao lado de `magnamelillo@gmail.com` → Reset password → digite exatamente o mesmo valor do PIN atual (mínimo 6 caracteres, exigência do Firebase).
-
-**Para adicionar um funcionário/outro administrador:** basta dar a ele o PIN de admin — não é preciso criar nenhuma conta nova no Firebase. Se quiser que essa pessoa NÃO tenha acesso à galeria de fotos (só a campanhas/história), isso exigiria voltar a ter PINs separados — hoje o sistema usa um único PIN para tudo, por decisão do Wagner (mais simples de administrar).
-
-## 11. Resumo do que foi corrigido nesta organização
-
-- Removido do repositório GitHub o arquivo `css/style.css`, que era um rascunho antigo sem nenhuma referência no HTML/JS atual (confirmado antes de remover).
-- Reescrito o `README.txt`, que ainda expunha publicamente um PIN antigo e descrevia uma arquitetura (KV `CAMPAIGNS_KV` + R2) que não corresponde ao que está realmente em produção.
-- Este documento (`ESTRUTURA-DO-SITE.md`) criado como referência central para qualquer pessoa (técnica ou não) que precisar entender ou mexer no site no futuro.
-
-## 12. Proteções técnicas adicionadas em 08/08/2026
-
-- Cabeçalhos CSP, HSTS, Permissions-Policy, proteção contra framing e `nosniff` em `_headers`.
-- Canonical/Open Graph corrigidos para o domínio de marca, JSON-LD de restaurante, `robots.txt`, `sitemap.xml` e página 404 real.
-- Renderização segura de campanhas e fotos sem interpolar conteúdo externo diretamente em `innerHTML`.
-- Timeout e validação de resposta nas chamadas ao Worker.
-- Revalidação do PIN salvo antes de reabrir o painel.
-- Validação de MIME/tamanho e otimização da imagem da galeria para respeitar o limite do Firestore.
-- Pages Functions legadas sem credencial padrão e com validação de entrada.
-- `.gitattributes` e `.gitignore` para normalizar fim de linha e impedir que backups locais entrem no Git por engano.
-
-Estas mudanças só passam a valer no site público depois de serem revisadas, commitadas e publicadas no branch usado pelo Cloudflare Pages.
+Senhas provisórias devem ser entregues por canal seguro e nunca registradas no Git, em documentos públicos ou em código.

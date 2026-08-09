@@ -11,9 +11,14 @@ const lightbox = document.querySelector("#lightbox");
 const lightboxImg = document.querySelector("#lightbox-img");
 const lightboxCaption = document.querySelector("#lightbox-caption");
 
-function safeDataImage(value) {
+function safeImage(value) {
   const source = String(value || "").trim();
-  return /^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=\s]+$/i.test(source) ? source : "";
+  if (/^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=\s]+$/i.test(source)) return source;
+  try {
+    const url = new URL(source, window.location.href);
+    if (url.protocol === "https:" || (url.origin === window.location.origin && url.protocol === window.location.protocol)) return url.href;
+  } catch (_) {}
+  return "";
 }
 
 function openLightbox(src, caption) {
@@ -51,7 +56,7 @@ async function loadGallery() {
     }
     const items = snap.docs.map((docSnap) => {
       const data = docSnap.data();
-      const source = safeDataImage(data.imageBase64);
+      const source = safeImage(data.imageUrl || data.imageBase64);
       if (!source) return null;
       const caption = String(data.caption || "").trim().slice(0, 240);
       const button = document.createElement("button");

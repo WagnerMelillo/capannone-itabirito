@@ -5,3 +5,22 @@
 .gallery-teaser small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
 .gallery-teaser b{margin-left:auto;color:var(--tomato);font-size:18px;flex:none}
 .gallery-teaser:hover{background:#efe6d3}
+
+#site-location-address,#site-footer-address{white-space:pre-line}
+.product-card{overflow:hidden}
+.product-media{margin:-22px -22px 18px;background:var(--forest-2);position:relative}
+.drink-card .product-media{margin:-23px -23px 18px}
+.product-media img,.product-media video{display:block;width:100%;height:210px;object-fit:cover;background:var(--forest-2)}
+.product-media video{height:auto;max-height:300px}
+.product-video-link{display:block;padding:11px 16px;color:#fff;background:var(--forest);font-size:12px;font-weight:800;text-decoration:none}
+.drink-card.product-card{display:flex;flex-direction:column}
+.drink-card.product-card .prices{grid-template-columns:repeat(auto-fit,minmax(90px,1fr));width:100%}
+.drink-card.product-card .pizza-order{margin-top:15px}
+.menu-empty{padding:28px;background:rgba(255,253,248,.75);border:1px solid #ded1c1;color:var(--muted);text-align:center}
+.campaign-products{display:block;color:#d7e4da;font-size:11px;margin:0 0 11px}
+.campaign-card-no-image{background:linear-gradient(135deg,var(--forest),var(--forest-2))}
+.campaign-card-no-image>div{inset:0;display:flex;flex-direction:column;justify-content:end;background:linear-gradient(transparent,rgba(7,22,15,.7))}
+
+@media(max-width:640px){
+  .product-media img{height:190px}
+}
