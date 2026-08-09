@@ -1,4 +1,5 @@
 const PROJECT_ID = "capannone-itabirito";
+const SUPERADMIN_UID = "unHjEmB7jXPGTXhvc2mFB9Iht3h1";
 const TOKEN_ISSUER = `https://securetoken.google.com/${PROJECT_ID}`;
 const FIREBASE_JWKS = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
 const FIRESTORE_USERS = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/users`;
@@ -102,7 +103,8 @@ async function requireAdmin(request) {
   const role = fields.role?.stringValue || "";
   const active = fields.active?.booleanValue === true;
   const mustChangePassword = fields.mustChangePassword?.booleanValue !== false;
-  if (!active || mustChangePassword || !["admin", "superadmin"].includes(role)) throw new Error("profile-not-authorized");
+  const authorizedRole = role === "admin" || (role === "superadmin" && claims.sub === SUPERADMIN_UID);
+  if (!active || mustChangePassword || !authorizedRole) throw new Error("profile-not-authorized");
   return { uid: claims.sub, email: claims.email || "", role };
 }
 

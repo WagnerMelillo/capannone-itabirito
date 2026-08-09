@@ -2,6 +2,10 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function ownerUid() {
+      return 'unHjEmB7jXPGTXhvc2mFB9Iht3h1';
+    }
+
     function signedIn() {
       return request.auth != null;
     }
@@ -14,12 +18,15 @@ service cloud.firestore {
       return signedIn()
         && currentProfile().active == true
         && currentProfile().mustChangePassword == false
-        && currentProfile().role in ['admin', 'superadmin'];
+        && (
+          currentProfile().role == 'admin'
+          || (request.auth.uid == ownerUid() && currentProfile().role == 'superadmin')
+        );
     }
 
     function isSuperadmin() {
       return isActiveAdmin()
-        && request.auth.uid == 'n7YwMAtBWrZmQUkTwfDQr5mnQsB2'
+        && request.auth.uid == ownerUid()
         && currentProfile().role == 'superadmin';
     }
 
@@ -38,21 +45,21 @@ service cloud.firestore {
       allow read: if signedIn() && (request.auth.uid == uid || isSuperadmin());
       allow create: if validUser(request.resource.data) && (
         (
-          request.auth.uid == 'n7YwMAtBWrZmQUkTwfDQr5mnQsB2'
+          request.auth.uid == ownerUid()
           && uid == request.auth.uid
           && request.resource.data.role == 'superadmin'
           && request.resource.data.active == true
         )
         || (
           isSuperadmin()
-          && uid != 'n7YwMAtBWrZmQUkTwfDQr5mnQsB2'
+          && uid != ownerUid()
           && request.resource.data.role == 'admin'
         )
       );
       allow update: if validUser(request.resource.data) && (
         (
           isSuperadmin()
-          && uid != 'n7YwMAtBWrZmQUkTwfDQr5mnQsB2'
+          && uid != ownerUid()
           && resource.data.role == 'admin'
           && request.resource.data.role == 'admin'
           && request.resource.data.email == resource.data.email

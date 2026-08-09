@@ -26,6 +26,8 @@ import {
 import { firebaseConfig } from "./firebase-config.js";
 import { CATEGORY_LABELS, DEFAULT_MENU_ITEMS, DEFAULT_SITE_CONTENT, MEDIA_API } from "./default-content.js";
 
+const SUPERADMIN_UID = "unHjEmB7jXPGTXhvc2mFB9Iht3h1";
+const SUPERADMIN_EMAIL = "magnamelillo@gmail.com";
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -48,8 +50,8 @@ const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selec
 const nowIso = () => new Date().toISOString();
 const clean = (value, max = 1000) => String(value ?? "").trim().slice(0, max);
 const number = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
-const isSuperadmin = () => state.profile?.role === "superadmin";
-const isAuthorized = () => Boolean(state.profile?.active && ["admin", "superadmin"].includes(state.profile.role));
+const isSuperadmin = () => Boolean(auth.currentUser?.uid === SUPERADMIN_UID && state.profile?.role === "superadmin" && state.profile?.active);
+const isAuthorized = () => Boolean(state.profile?.active && (state.profile.role === "admin" || isSuperadmin()));
 
 function setMessage(selector, text = "", type = "") {
   const element = $(selector);
@@ -230,7 +232,7 @@ function renderDashboard() {
   $("#metric-products").textContent = String(state.products.filter((item) => item.active).length);
   $("#metric-campaigns").textContent = String(state.campaigns.filter((item) => campaignRuntimeStatus(item) === "active").length);
   $("#metric-gallery").textContent = String(state.gallery.length);
-  if (isSuperadmin()) $("#metric-users").textContent = String(state.users.filter((item) => item.active).length);
+  if (isSuperadmin()) $("#metric-users").textContent = String(state.users.filter((item) => item.id !== SUPERADMIN_UID && item.active).length);
 }
 
 function fillContentForm() {
@@ -446,17 +448,19 @@ function renderUsers() {
   const holder = $("#user-list");
   if (!holder || !isSuperadmin()) return;
   if (!state.users.length) return holder.replaceChildren(emptyList("Nenhum usuário cadastrado."));
-  holder.replaceChildren(...state.users.map((item) => {
+  const users = [...state.users].sort((a, b) => Number(b.id === SUPERADMIN_UID) - Number(a.id === SUPERADMIN_UID));
+  holder.replaceChildren(...users.map((item) => {
+    const isOwner = item.id === SUPERADMIN_UID;
     const card = document.createElement("article"); card.className = "list-card no-image";
     const content = document.createElement("div"); const title = document.createElement("h3"); title.textContent = clean(item.displayName || item.email, 120);
     const description = document.createElement("p"); description.textContent = clean(item.email, 200);
     const meta = document.createElement("div"); meta.className = "list-card-meta";
-    meta.append(badge(item.role === "superadmin" ? "Super-administrador" : "Administrador"), badge(item.active ? "Acesso ativo" : "Acesso bloqueado", item.active ? "active" : "ended"));
+    meta.append(badge(isOwner ? "Proprietário do painel" : "Equipe de marketing"), badge(item.active ? "Acesso ativo" : "Acesso removido", item.active ? "active" : "ended"));
     if (item.mustChangePassword) meta.append(badge("Troca de senha pendente", "warning"));
     content.append(title, description, meta);
     const actions = document.createElement("div"); actions.className = "list-card-actions";
-    if (item.role !== "superadmin") {
-      actions.append(actionButton("Enviar redefinição", "reset-user", item.id), actionButton("Exigir nova senha", "require-password", item.id), actionButton(item.active ? "Bloquear" : "Reativar", "toggle-user", item.id, item.active ? "danger" : ""));
+    if (!isOwner) {
+      actions.append(actionButton("Enviar redefinição", "reset-user", item.id), actionButton("Exigir nova senha", "require-password", item.id), actionButton(item.active ? "Remover acesso" : "Restaurar acesso", "toggle-user", item.id, item.active ? "danger" : ""));
     }
     card.append(content, actions); return card;
   }));
@@ -593,6 +597,7 @@ async function handleUserSave(event) {
   const button = event.submitter; button.disabled = true; setMessage("#user-message", "Criando acesso…");
   try {
     const displayName = clean($("#user-name").value, 100); const email = clean($("#user-email").value, 200).toLowerCase(); const password = $("#user-temp-password").value;
+    if (email === SUPERADMIN_EMAIL) throw new Error("Este e-mail pertence ao proprietário do painel e não pode ser cadastrado como marketing.");
     if (password.length < 10 || !/[A-Za-zÀ-ÿ]/.test(password) || !/\d/.test(password)) throw new Error("A senha provisória deve ter ao menos 10 caracteres, com letras e números.");
     const credential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
     const record = { displayName, email, role: "admin", active: true, mustChangePassword: true, createdAt: nowIso(), createdBy: auth.currentUser.uid, updatedAt: nowIso() };
@@ -637,15 +642,23 @@ async function handleGalleryAction(button) {
 
 async function handleUserAction(button) {
   if (!isSuperadmin()) return;
-  const item = state.users.find((entry) => entry.id === button.dataset.id); if (!item || item.role === "superadmin") return;
+  const item = state.users.find((entry) => entry.id === button.dataset.id); if (!item || item.id === SUPERADMIN_UID) return;
   if (button.dataset.action === "reset-user") {
     button.disabled = true; await sendPasswordResetEmail(auth, item.email); await audit("password-reset-request", "user", item.id); toast("E-mail de redefinição enviado."); return;
   }
   if (button.dataset.action === "require-password") {
     button.disabled = true; await updateDoc(doc(db, "users", item.id), { mustChangePassword: true, updatedAt: nowIso(), updatedBy: auth.currentUser.uid }); item.mustChangePassword = true; await audit("require-password-change", "user", item.id); renderUsers(); toast("A troca de senha será obrigatória no próximo acesso."); return;
   }
-  if (button.dataset.action === "toggle-user" && confirm(`${item.active ? "Bloquear" : "Reativar"} o acesso de ${item.email}?`)) {
-    button.disabled = true; await updateDoc(doc(db, "users", item.id), { active: !item.active, updatedAt: nowIso(), updatedBy: auth.currentUser.uid }); item.active = !item.active; await audit("toggle-access", "user", item.id, { active: item.active }); renderUsers(); renderDashboard(); toast(item.active ? "Acesso reativado." : "Acesso bloqueado.");
+  if (button.dataset.action === "toggle-user") {
+    const question = item.active
+      ? `Remover o acesso de ${item.email}? A pessoa perderá imediatamente a permissão de alterar o site.`
+      : `Restaurar o acesso de ${item.email}?`;
+    if (!confirm(question)) return;
+    button.disabled = true;
+    await updateDoc(doc(db, "users", item.id), { active: !item.active, updatedAt: nowIso(), updatedBy: auth.currentUser.uid });
+    item.active = !item.active;
+    await audit(item.active ? "restore-access" : "revoke-access", "user", item.id, { active: item.active });
+    renderUsers(); renderDashboard(); toast(item.active ? "Acesso restaurado." : "Acesso removido imediatamente.");
   }
 }
 

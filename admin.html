@@ -80,7 +80,7 @@
           <article><span>Itens ativos</span><strong id="metric-products">—</strong><small>no cardápio</small></article>
           <article><span>Campanhas</span><strong id="metric-campaigns">—</strong><small>ativas agora</small></article>
           <article><span>Fotos</span><strong id="metric-gallery">—</strong><small>na galeria</small></article>
-          <article class="superadmin-only" hidden><span>Usuários</span><strong id="metric-users">—</strong><small>com acesso ativo</small></article>
+          <article class="superadmin-only" hidden><span>Marketing</span><strong id="metric-users">—</strong><small>pessoas com acesso</small></article>
         </div>
         <div class="admin-panel-card">
           <h2>Atalhos</h2>
@@ -149,8 +149,8 @@
       </section>
 
       <section class="admin-view superadmin-only" data-view="users" hidden>
-        <div class="view-heading"><div><p class="eyebrow">SUPER-ADMINISTRADOR</p><h1>Usuários e acessos.</h1><p>Somente você pode criar, bloquear e solicitar troca de senha.</p></div><button class="button button-order" id="new-user-button" type="button">Novo administrador</button></div>
-        <div class="security-note">Senhas definitivas nunca ficam visíveis no painel. O novo usuário recebe uma senha provisória e será obrigado a trocá-la no primeiro acesso.</div>
+        <div class="view-heading"><div><p class="eyebrow">EXCLUSIVO DO PROPRIETÁRIO</p><h1>Equipe de marketing.</h1><p>Somente você pode credenciar pessoas, remover acessos e solicitar troca de senha.</p></div><button class="button button-order" id="new-user-button" type="button">Credenciar pessoa</button></div>
+        <div class="security-note">Informe um e-mail e crie uma senha provisória. No primeiro acesso, a pessoa será obrigada a definir a própria senha. “Remover acesso” revoga imediatamente as permissões, sem apagar o histórico administrativo.</div>
         <div class="admin-list" id="user-list"></div>
       </section>
     </div>
@@ -220,6 +220,6 @@
 <template id="price-row-template"><div class="price-row"><input class="price-label" maxlength="50" placeholder="Ex.: Média · 30cm" aria-label="Rótulo do preço"><input class="price-value" type="number" min="0" step="0.01" placeholder="0,00" aria-label="Valor"><button type="button" class="remove-price" aria-label="Remover preço">✕</button></div></template>
 
 <noscript><p class="noscript">Ative o JavaScript para usar o painel administrativo.</p></noscript>
-<script type="module" src="js/admin.js?v=20260808-2"></script>
+<script type="module" src="js/admin.js?v=20260809-1"></script>
 </body>
 </html>

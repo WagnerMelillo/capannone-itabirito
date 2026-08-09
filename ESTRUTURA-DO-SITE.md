@@ -27,9 +27,9 @@ O navegador público lê conteúdo liberado pelas regras do Firestore. As grava�
 
 ### Super-administrador
 
-- Existe um único perfil autorizado como `superadmin`.
+- O único perfil autorizado como `superadmin` pertence a `magnamelillo@gmail.com`.
 - Pode editar todo o conteúdo e gerenciar usuários.
-- Pode criar administradores, bloquear ou reativar acesso, enviar redefinição de senha e exigir nova senha.
+- Pode credenciar pessoas, remover ou restaurar acesso, enviar redefinição de senha e exigir nova senha.
 - As regras impedem a criação de um segundo super-administrador pelo painel.
 
 ### Administrador de marketing
@@ -38,6 +38,8 @@ O navegador público lê conteúdo liberado pelas regras do Firestore. As grava�
 - Ao receber uma senha provisória, precisa criar uma senha definitiva no primeiro acesso.
 - Pode alterar conteúdo, fotos, vídeos, preços, cardápio, campanhas e galeria.
 - Não pode listar ou gerenciar usuários e senhas.
+
+Remover uma pessoa no painel revoga imediatamente as permissões de edição, mas preserva o registro para auditoria e eventual restauração pelo proprietário.
 
 O antigo acesso por credencial compartilhada foi aposentado. A senha Firebase de um usuário não depende de nenhum segredo do Worker.
 
