@@ -29,7 +29,7 @@
     <div class="auth-card">
       <p class="eyebrow">PAINEL CAPANNONE</p>
       <h1>Conteúdo fácil de cuidar.</h1>
-      <p>Entre com seu e-mail e sua senha pessoal. O antigo PIN compartilhado não é mais usado.</p>
+      <p>Entre com seu e-mail e sua senha. O primeiro acesso é feito com a senha provisória entregue pelo proprietário.</p>
       <form id="login-form">
         <label for="login-email">E-mail</label>
         <input id="login-email" type="email" autocomplete="username" required>
@@ -37,7 +37,6 @@
         <input id="login-password" type="password" autocomplete="current-password" minlength="8" required>
         <button class="button button-order full" type="submit">Entrar</button>
       </form>
-      <button class="text-action" id="forgot-password-button" type="button">Esqueci minha senha</button>
       <p class="form-message" id="login-message" role="status" aria-live="polite"></p>
     </div>
   </section>
@@ -149,8 +148,8 @@
       </section>
 
       <section class="admin-view superadmin-only" data-view="users" hidden>
-        <div class="view-heading"><div><p class="eyebrow">EXCLUSIVO DO PROPRIETÁRIO</p><h1>Equipe de marketing.</h1><p>Somente você pode credenciar pessoas, remover acessos e solicitar troca de senha.</p></div><button class="button button-order" id="new-user-button" type="button">Credenciar pessoa</button></div>
-        <div class="security-note">Informe um e-mail e crie uma senha provisória. No primeiro acesso, a pessoa será obrigada a definir a própria senha. “Remover acesso” revoga imediatamente as permissões, sem apagar o histórico administrativo.</div>
+        <div class="view-heading"><div><p class="eyebrow">EXCLUSIVO DO PROPRIETÁRIO</p><h1>Equipe de marketing.</h1><p>Somente você pode credenciar pessoas, remover acessos e exigir uma nova senha.</p></div><button class="button button-order" id="new-user-button" type="button">Credenciar pessoa</button></div>
+        <div class="security-note">O e-mail serve apenas para identificar o login; não enviamos link de validação. Você cria e entrega uma senha provisória, e no primeiro acesso a pessoa é obrigada a definir a própria senha. “Remover acesso” revoga imediatamente as permissões, sem apagar o histórico administrativo.</div>
         <div class="admin-list" id="user-list"></div>
       </section>
     </div>
@@ -220,6 +219,6 @@
 <template id="price-row-template"><div class="price-row"><input class="price-label" maxlength="50" placeholder="Ex.: Média · 30cm" aria-label="Rótulo do preço"><input class="price-value" type="number" min="0" step="0.01" placeholder="0,00" aria-label="Valor"><button type="button" class="remove-price" aria-label="Remover preço">✕</button></div></template>
 
 <noscript><p class="noscript">Ative o JavaScript para usar o painel administrativo.</p></noscript>
-<script type="module" src="js/admin.js?v=20260809-1"></script>
+<script type="module" src="js/admin.js?v=20260809-2"></script>
 </body>
 </html>
