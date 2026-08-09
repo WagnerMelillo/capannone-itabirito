@@ -59,14 +59,12 @@ O `js/default-content.js` preserva um baseline local do conteúdo e do cardápio
 ```text
 index.html                    página pública
 admin.html                    painel administrativo responsivo
-portal.html                   página atual do Wi-Fi
 espaco-fotos.html             galeria pública
 js/site.js                    leitura e renderização do conteúdo público
 js/admin.js                   autenticação, permissões e operações do painel
 js/default-content.js         baseline local e constantes compartilhadas
 js/firebase-config.js         configuração pública do projeto Firebase
 js/espaco-fotos.js            leitura compatível da galeria
-js/portal.js                  aceite e redirecionamento do portal atual
 worker/media-api.js           Worker autenticado para imagens e vídeos
 firestore.rules               regras de acesso do banco
 firebase.json                 configuração somente do Firestore
@@ -116,11 +114,9 @@ Para retorno, use o commit de produção anterior no GitHub e a versão anterior
 
 As chaves presentes em `js/firebase-config.js` identificam o projeto cliente e são públicas por definição. A proteção efetiva está nas regras do Firestore, no Firebase Authentication e na validação do Worker.
 
-## 9. Portal Wi-Fi
+## 9. Wi-Fi no local
 
-O `portal.html` atual mostra termos e, após o aceite, redireciona para o Aiqfome. Não foram encontrados callback, token, endereço de controlador, autorização de MAC, integração RADIUS nem parâmetros de um equipamento de hotspot.
-
-Portanto, a página não comprova liberação real de rede. Para integrar o hotspot sem adivinhar parâmetros, ainda são necessários fabricante/modelo do controlador, fluxo de captive portal e credenciais/documentação técnica do equipamento. Até isso existir, preserve o fluxo atual para não quebrar o link exibido no site.
+O site não oferece portal de autenticação de Wi-Fi. A disponibilidade da rede é informada discretamente no rodapé como conveniência para acessar o próprio site e o cardápio durante a visita.
 
 ## 10. Operação do painel
 

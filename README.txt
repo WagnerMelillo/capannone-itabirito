@@ -9,7 +9,6 @@ Resumo:
 - Login do painel: Firebase Authentication, com contas individuais.
 - Imagens e vídeos enviados pelo painel: Cloudflare Worker + KV.
 - O Firebase Hosting existe no projeto, mas não hospeda o site oficial.
-- O portal.html ainda é apenas uma página de aceite/redirecionamento; não há
-  integração comprovada com o controlador físico do hotspot.
+- O Wi-Fi é informado discretamente no rodapé; não existe portal web no site.
 
 Não registre senhas, tokens ou credenciais neste repositório.

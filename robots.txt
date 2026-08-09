@@ -1,7 +1,6 @@
 User-agent: *
 Allow: /
 Disallow: /admin
-Disallow: /portal
 Disallow: /api/
 
 Sitemap: https://capannone.dasmmelhores.com/sitemap.xml
