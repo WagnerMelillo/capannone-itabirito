@@ -4,7 +4,7 @@ import { addDoc, collection, doc, getDoc, getDocs, getFirestore, orderBy, query,
 import { firebaseConfig } from "./firebase-config.js";
 import { MEDIA_API } from "./default-content.js";
 
-const SUPERADMIN_UID = "n7YwMAtBWrZmQUkTwfDQr5mnQsB2";
+const SUPERADMIN_UID = "unHjEmB7jXPGTXhvc2mFB9Iht3h1";
 const MAGNA_EMAIL = "magnamelillo@gmail.com";
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);

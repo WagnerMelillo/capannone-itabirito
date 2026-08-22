@@ -25,8 +25,8 @@ import {
 import { firebaseConfig } from "./firebase-config.js";
 import { CATEGORY_LABELS, DEFAULT_MENU_ITEMS, DEFAULT_SITE_CONTENT, MEDIA_API } from "./default-content.js";
 
-const SUPERADMIN_UID = "n7YwMAtBWrZmQUkTwfDQr5mnQsB2";
-const SUPERADMIN_EMAIL = "wagnermelillo@gmail.com";
+const SUPERADMIN_UID = "unHjEmB7jXPGTXhvc2mFB9Iht3h1";
+const SUPERADMIN_EMAIL = "magnamelillo@gmail.com";
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -187,7 +187,7 @@ function applyRoleVisibility() {
 }
 
 function switchView(name) {
-  if (name === "users" && !isSuperadmin()) name = "dashboard";
+  if (name === "users") name = "dashboard";
   state.activeView = name;
   $$(".admin-view").forEach((view) => { view.hidden = view.dataset.view !== name; });
   $$("[data-admin-view]").forEach((button) => button.classList.toggle("active", button.dataset.adminView === name));
@@ -793,8 +793,7 @@ onAuthStateChanged(auth, async (user) => {
     applyRoleVisibility();
     if (state.profile.mustChangePassword) { showAuthView("password"); return; }
     showAuthView("app"); await loadAllData(); await seedDefaultsIfEmpty();
-    const requestedView = new URL(location.href).searchParams.get("view");
-    switchView(requestedView === "users" && isSuperadmin() ? "users" : "dashboard");
+    switchView("dashboard");
   } catch (error) {
     await signOut(auth).catch(() => {});
     showAuthView("login"); setMessage("#login-message", friendlyError(error), "error");
