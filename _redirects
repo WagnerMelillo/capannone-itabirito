@@ -1,2 +1,10 @@
 /portal /#cardapio 302
 /portal.html /#cardapio 302
+/admin /marketing 301
+/admin.html /marketing 301
+/marketing /marketing.html 200
+/marketing/ /marketing.html 200
+/magna /magna.html 200
+/magna/ /magna.html 200
+/funcionarios /funcionarios/index.html 200
+/funcionarios/ /funcionarios/index.html 200

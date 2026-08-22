@@ -1,6 +1,6 @@
 # Capannone Itabirito — arquitetura e operação
 
-Referência atualizada em 08/08/2026 após a reforma do painel administrativo e a auditoria de segurança.
+Referência atualizada em 21/08/2026 após a separação dos ambientes de marketing, proprietária e funcionários.
 
 ## 1. Fonte da verdade e hospedagem
 
@@ -21,7 +21,7 @@ Referência atualizada em 08/08/2026 após a reforma do painel administrativo e 
 | Imagens e vídeos enviados pelo painel | Cloudflare Worker + KV | Worker `capannone-itabirito-api`, binding `CAPANNONE_DATA` |
 | DNS | Cloudflare DNS | zona `dasmmelhores.com` |
 
-O navegador público lê conteúdo liberado pelas regras do Firestore. As gravações exigem uma conta ativa com perfil `admin` ou `superadmin` e senha definitiva. O Worker de mídia valida o token Firebase e o perfil no Firestore antes de aceitar upload ou exclusão.
+O navegador público lê conteúdo liberado pelas regras do Firestore. As gravações exigem uma conta ativa, papel compatível e senha definitiva. O Worker valida o token Firebase e o perfil no Firestore antes de aceitar uploads, exclusões ou registros de ponto.
 
 ## 3. Acessos
 
@@ -43,6 +43,14 @@ Remover uma pessoa no painel revoga imediatamente as permissões de edição, ma
 
 O e-mail é somente o identificador de login. O painel não usa link de validação ou redefinição por e-mail: a credencial inicial é sempre uma senha provisória criada e entregue pelo proprietário.
 
+### Proprietária e funcionários
+
+- A Magna acessa `/magna` e gerencia pessoal, férias, pagamentos gerais, estoque, receitas, escalas e conversas internas.
+- A proprietária pode cadastrar, desativar ou excluir funcionários; a senha provisória precisa ser trocada no primeiro acesso.
+- Funcionários acessam `/funcionarios`, onde consultam o calendário, conversam com a Magna e registram o ponto.
+- O ponto permanece bloqueado enquanto a origem pública da rede Capannone Hotspot não estiver configurada no Worker.
+- O Wagner pode abrir “Super-administrador” dentro da área Magna usando a sessão já autenticada; as permissões continuam verificadas pelo Firebase e pelas regras do banco.
+
 O antigo acesso por credencial compartilhada foi aposentado. A senha Firebase de um usuário não depende de nenhum segredo do Worker.
 
 ## 4. Conteúdo gerenciado
@@ -55,6 +63,12 @@ Coleções/documentos principais do Firestore:
 - `espaco_fotos`: galeria pública do espaço para eventos. Os dois registros antigos em base64 continuam compatíveis; novos uploads usam URL de mídia.
 - `users`: perfil, papel, situação e obrigação de troca de senha.
 - `auditLogs`: trilha das ações administrativas.
+- `employees`: cadastro operacional e vínculo com a conta de cada funcionário.
+- `internalPayments`: compromissos e pagamentos gerais, sem finalidade fiscal.
+- `inventoryItems`: estoque e listas de compras por fornecedor.
+- `recipes` e `recipeVersions`: receitas editáveis e histórico datado.
+- `workShifts`: escalas, domingos, feriados e dias de trabalho.
+- `staffMessages`: conversas entre proprietária e equipe.
 
 O `js/default-content.js` preserva um baseline local do conteúdo e do cardápio. Se o Firebase estiver temporariamente indisponível antes da inicialização do banco, o cliente continua vendo o conteúdo essencial.
 
@@ -62,10 +76,16 @@ O `js/default-content.js` preserva um baseline local do conteúdo e do cardápio
 
 ```text
 index.html                    página pública
-admin.html                    painel administrativo responsivo
+marketing.html                gestão de conteúdo e campanhas
+admin.html                    redirecionamento legado para /marketing
+magna.html                    plataforma interna da proprietária
+funcionarios/index.html       área individual dos funcionários
 espaco-fotos.html             galeria pública
 js/site.js                    leitura e renderização do conteúdo público
 js/admin.js                   autenticação, permissões e operações do painel
+js/magna.js                   operação interna da proprietária
+js/funcionarios.js            calendário, chat e ponto da equipe
+css/internal.css              interface responsiva e impressão A4 interna
 js/default-content.js         baseline local e constantes compartilhadas
 js/firebase-config.js         configuração pública do projeto Firebase
 js/espaco-fotos.js            leitura compatível da galeria
@@ -88,6 +108,9 @@ Rotas atuais:
 - `POST /media`: upload autenticado de JPG, PNG, WebP, MP4 ou WebM.
 - `GET|HEAD /media/{id}`: entrega pública da mídia com cache e suporte a intervalo de bytes.
 - `DELETE /media/{id}`: exclusão autenticada.
+- `GET /hotspot/status`: confirma se a rede do funcionário é a origem cadastrada.
+- `POST /hotspot/clock`: valida rede, conta e PIN antes de registrar entrada ou saída.
+- `GET /hotspot/entries`: consulta protegida de registros próprios ou gerenciais.
 - `GET /campaigns`, `GET /content/history` e `GET|HEAD /images/{id}`: leitura temporária compatível com dados antigos em KV.
 
 Uploads aceitam imagens de até 5 MB e vídeos de até 20 MB. A origem é limitada aos domínios oficiais, previews do Pages e ambiente local. O Worker verifica assinatura do arquivo, assinatura criptográfica do token Firebase, projeto emissor, validade do token e perfil ativo no Firestore.
@@ -122,9 +145,12 @@ As chaves presentes em `js/firebase-config.js` identificam o projeto cliente e s
 
 O site não oferece portal de autenticação de Wi-Fi. A disponibilidade da rede é informada discretamente no rodapé como conveniência para acessar o próprio site e o cardápio durante a visita. Os endereços antigos do portal apenas redirecionam para o cardápio, evitando que favoritos ou QR codes antigos abram conteúdo obsoleto.
 
-## 10. Operação do painel
+## 10. Operação dos painéis
 
-- Acesso: `https://capannone.dasmmelhores.com/admin.html`.
+- Marketing: `https://capannone.dasmmelhores.com/marketing`.
+- Proprietária: `https://capannone.dasmmelhores.com/magna`.
+- Funcionários: `https://capannone.dasmmelhores.com/funcionarios`.
+- O endereço antigo `/admin` redireciona permanentemente para `/marketing`.
 - Use “Conteúdo do site” para textos, contatos, links e imagens institucionais.
 - Use “Cardápio e preços” para criar, editar, ocultar ou excluir itens.
 - Use “Campanhas” para rascunhar, agendar, ativar ou encerrar ações.

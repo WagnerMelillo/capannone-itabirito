@@ -792,7 +792,9 @@ onAuthStateChanged(auth, async (user) => {
     $("#welcome-name").textContent = clean(state.profile.displayName || user.email?.split("@")[0] || "equipe", 80);
     applyRoleVisibility();
     if (state.profile.mustChangePassword) { showAuthView("password"); return; }
-    showAuthView("app"); await loadAllData(); await seedDefaultsIfEmpty(); switchView("dashboard");
+    showAuthView("app"); await loadAllData(); await seedDefaultsIfEmpty();
+    const requestedView = new URL(location.href).searchParams.get("view");
+    switchView(requestedView === "users" && isSuperadmin() ? "users" : "dashboard");
   } catch (error) {
     await signOut(auth).catch(() => {});
     showAuthView("login"); setMessage("#login-message", friendlyError(error), "error");

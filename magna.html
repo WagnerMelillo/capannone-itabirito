@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#173d2d">
+<meta name="robots" content="noindex,nofollow">
+<title>Gestão Magna | Capannone</title>
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/site.css?v=20260808-2">
+<link rel="stylesheet" href="/css/admin-overrides.css?v=20260809-1">
+<link rel="stylesheet" href="/css/internal.css?v=20260821-1">
+</head>
+<body class="admin-v2-page internal-page">
+<a class="skip-link" href="#internal-content">Pular para o conteúdo</a>
+
+<header class="admin-topbar">
+  <a class="admin-brand" href="/" aria-label="Voltar ao site da Capannone"><img src="/assets/brand/logo.webp" alt="Capannone Casa das Massas" width="648" height="220"></a>
+  <div class="admin-topbar-actions">
+    <span class="admin-user-summary" id="user-summary" hidden></span>
+    <a class="admin-link" href="/" target="_blank" rel="noopener">Ver site ↗</a>
+    <button class="admin-link admin-link-button" id="logout-button" type="button" hidden>Sair</button>
+  </div>
+</header>
+
+<main id="internal-content">
+  <section class="auth-shell" id="login-view">
+    <div class="auth-card">
+      <p class="eyebrow">GESTÃO INTERNA</p>
+      <h1>A rotina da Capannone, organizada.</h1>
+      <p>Entre com seu acesso individual. Esta área é reservada à proprietária e ao Super-administrador.</p>
+      <form id="login-form">
+        <label for="login-email">E-mail</label><input id="login-email" type="email" autocomplete="username" required>
+        <label for="login-password">Senha</label><input id="login-password" type="password" autocomplete="current-password" minlength="6" required>
+        <button class="button button-order full" type="submit">Entrar na gestão</button>
+      </form>
+      <p class="form-message" id="login-message" role="status" aria-live="polite"></p>
+      <a class="auth-secondary-link" href="/funcionarios">Sou funcionário da Capannone</a>
+    </div>
+  </section>
+
+  <section class="auth-shell" id="password-view" hidden>
+    <div class="auth-card">
+      <p class="eyebrow">PRIMEIRO ACESSO</p><h1>Crie sua senha definitiva.</h1>
+      <p>A senha provisória será descartada. Use pelo menos 10 caracteres, incluindo letras e números.</p>
+      <form id="password-form">
+        <label for="new-password">Nova senha</label><input id="new-password" type="password" autocomplete="new-password" minlength="10" required>
+        <label for="confirm-password">Confirme a nova senha</label><input id="confirm-password" type="password" autocomplete="new-password" minlength="10" required>
+        <button class="button button-order full" type="submit">Salvar nova senha</button>
+      </form>
+      <p class="form-message" id="password-message" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+
+  <div class="admin-app" id="internal-app" hidden>
+    <aside class="admin-sidebar internal-sidebar" aria-label="Áreas da gestão interna">
+      <button class="admin-nav-item active" type="button" data-internal-view="dashboard">Visão geral</button>
+      <button class="admin-nav-item" type="button" data-internal-view="people">Pessoal e férias</button>
+      <button class="admin-nav-item" type="button" data-internal-view="payments">Pagamentos gerais</button>
+      <button class="admin-nav-item" type="button" data-internal-view="inventory">Estoque e compras</button>
+      <button class="admin-nav-item" type="button" data-internal-view="recipes">Receitas</button>
+      <button class="admin-nav-item" type="button" data-internal-view="schedule">Escalas e ponto</button>
+      <button class="admin-nav-item" type="button" data-internal-view="chat">Chat da equipe</button>
+      <div class="internal-nav-separator" aria-hidden="true"></div>
+      <a class="admin-nav-item internal-nav-link" href="/marketing">Marketing</a>
+      <a class="admin-nav-item internal-nav-link superadmin-only" href="/marketing?view=users" hidden>Super-administrador</a>
+      <a class="admin-nav-item internal-nav-link" href="/funcionarios">Área dos funcionários</a>
+    </aside>
+
+    <div class="admin-workspace">
+      <div class="admin-toast" id="internal-toast" role="status" aria-live="polite" hidden></div>
+
+      <section class="admin-view" data-view="dashboard">
+        <div class="view-heading"><div><p class="eyebrow">GESTÃO MAGNA</p><h1>Olá, <span id="welcome-name">Magna</span>.</h1><p>Uma visão simples do que precisa da sua atenção.</p></div><button class="button button-dark" id="refresh-dashboard" type="button">Atualizar dados</button></div>
+        <div class="metric-grid internal-metrics">
+          <article><span>Equipe ativa</span><strong id="metric-employees">—</strong><small>pessoas cadastradas</small></article>
+          <article><span>Contas pendentes</span><strong id="metric-payments">—</strong><small id="metric-payments-value">aguardando</small></article>
+          <article><span>Estoque baixo</span><strong id="metric-stock">—</strong><small>itens para comprar</small></article>
+          <article><span>Receitas</span><strong id="metric-recipes">—</strong><small>no caderno interno</small></article>
+        </div>
+        <div class="internal-dashboard-grid">
+          <article class="admin-panel-card attention-card"><h2>Próximos vencimentos</h2><div id="upcoming-payments" class="compact-list"></div></article>
+          <article class="admin-panel-card"><h2>Atalhos</h2><div class="shortcut-grid internal-shortcuts"><button type="button" data-go-view="people">Cadastrar funcionário</button><button type="button" data-go-view="payments">Registrar conta</button><button type="button" data-go-view="inventory">Atualizar estoque</button><button type="button" data-go-view="recipes">Nova receita</button></div></article>
+        </div>
+        <p class="internal-disclaimer">Ferramenta organizacional interna. Não substitui folha de pagamento, contabilidade, controle fiscal ou orientação profissional.</p>
+      </section>
+
+      <section class="admin-view" data-view="people" hidden>
+        <div class="view-heading"><div><p class="eyebrow">PESSOAL</p><h1>Equipe, pagamentos e férias.</h1><p>Cartões simples para acompanhar cada pessoa.</p></div><button class="button button-order magna-only" id="new-employee-button" type="button">Cadastrar funcionário</button></div>
+        <div class="employee-grid" id="employee-list"></div>
+      </section>
+
+      <section class="admin-view" data-view="payments" hidden>
+        <div class="view-heading"><div><p class="eyebrow">PAGAMENTOS</p><h1>Contas da pizzaria.</h1><p>Controle interno de vencimentos e pagamentos, sem finalidade fiscal.</p></div><button class="button button-order" id="new-payment-button" type="button">Nova conta</button></div>
+        <div class="list-toolbar"><select id="payment-status-filter"><option value="">Todos os status</option><option value="pending">Pendentes</option><option value="paid">Pagas</option></select><input id="payment-search" type="search" placeholder="Buscar conta ou fornecedor"></div>
+        <div class="admin-list" id="payment-list"></div>
+      </section>
+
+      <section class="admin-view" data-view="inventory" hidden>
+        <div class="view-heading"><div><p class="eyebrow">ESTOQUE</p><h1>Ingredientes e materiais.</h1><p>Veja o que está acabando e monte listas por fornecedor.</p></div><button class="button button-order" id="new-inventory-button" type="button">Novo item</button></div>
+        <div class="list-toolbar internal-toolbar"><input id="inventory-search" type="search" placeholder="Buscar item"><select id="inventory-supplier-filter"><option value="">Todos os fornecedores</option><option>CEASA</option><option>ASSAÍ</option><option>Atacadão</option><option>Villefort</option><option>Apoio Mineiro</option><option>Nova Safra</option><option>Não definido</option></select><label class="toolbar-check"><input id="inventory-low-filter" type="checkbox"> Somente acabando</label><button class="small-action" id="print-shopping-list" type="button">Imprimir lista</button></div>
+        <div class="admin-list inventory-list" id="inventory-list"></div>
+      </section>
+
+      <section class="admin-view" data-view="recipes" hidden>
+        <div class="view-heading"><div><p class="eyebrow">RECEITAS</p><h1>Caderno da Capannone.</h1><p>Cada alteração guarda automaticamente a versão anterior, com data.</p></div><button class="button button-order" id="new-recipe-button" type="button">Nova receita</button></div>
+        <div class="list-toolbar"><input id="recipe-search" type="search" placeholder="Buscar receita"><select id="recipe-category-filter"><option value="">Todas as categorias</option><option value="recheios">Recheios</option><option value="molhos">Molhos</option><option value="massas">Massas</option><option value="pizzas">Pizzas</option><option value="bebidas">Bebidas</option><option value="doces">Doces</option><option value="preparos">Preparos</option><option value="outros">Outros</option></select></div>
+        <div class="recipe-grid" id="recipe-list"></div>
+      </section>
+
+      <section class="admin-view" data-view="schedule" hidden>
+        <div class="view-heading"><div><p class="eyebrow">ESCALAS E PONTO</p><h1>Calendário da equipe.</h1><p>Organize os dias de trabalho e acompanhe os registros feitos no Hotspot.</p></div></div>
+        <div class="two-column-layout internal-two-column">
+          <form class="admin-panel-card" id="shift-form"><h2>Adicionar dia de trabalho</h2><div class="field"><label for="shift-employee">Funcionário</label><select id="shift-employee" required></select></div><div class="field"><label for="shift-date">Data</label><input id="shift-date" type="date" required></div><div class="form-grid"><div class="field"><label for="shift-start">Entrada prevista</label><input id="shift-start" type="time" required></div><div class="field"><label for="shift-end">Saída prevista</label><input id="shift-end" type="time" required></div></div><div class="field"><label for="shift-note">Observação</label><input id="shift-note" maxlength="240"></div><button class="button button-dark full" type="submit">Salvar na escala</button><p class="form-message" id="shift-message" role="status"></p></form>
+          <div><div class="admin-list" id="shift-list"></div><section class="admin-panel-card time-summary-card"><h2>Registros no Hotspot</h2><p id="hotspot-summary">A integração de rede será confirmada antes de liberar o relógio de ponto.</p><div class="compact-list" id="time-entry-list"></div></section></div>
+        </div>
+      </section>
+
+      <section class="admin-view" data-view="chat" hidden>
+        <div class="view-heading"><div><p class="eyebrow">CHAT INTERNO</p><h1>Recados da equipe.</h1><p>Mensagens simples entre a proprietária e os funcionários cadastrados.</p></div></div>
+        <div class="chat-shell"><div class="chat-messages" id="chat-messages" aria-live="polite"></div><form class="chat-form" id="chat-form"><label class="sr-only" for="chat-text">Nova mensagem</label><textarea id="chat-text" maxlength="1000" rows="3" placeholder="Escreva um recado para a equipe" required></textarea><button class="button button-order" type="submit">Enviar</button></form></div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<dialog class="admin-dialog compact-dialog" id="employee-dialog">
+  <form method="dialog" class="dialog-close-row"><button aria-label="Fechar" value="cancel">✕</button></form>
+  <form id="employee-form"><input id="employee-id" type="hidden"><p class="eyebrow">PESSOAL</p><h2 id="employee-dialog-title">Cadastrar funcionário</h2><div class="form-grid">
+    <div class="field"><label for="employee-name">Nome</label><input id="employee-name" maxlength="100" required></div><div class="field"><label for="employee-role">Função</label><input id="employee-role" maxlength="100" required></div>
+    <div class="field full-field new-employee-only"><label for="employee-email">E-mail de acesso</label><input id="employee-email" type="email" autocomplete="off" required></div>
+    <div class="field new-employee-only"><label for="employee-temp-password">Senha provisória</label><input id="employee-temp-password" type="password" autocomplete="new-password" minlength="6" required><small>Digite a senha provisória combinada e entregue-a diretamente ao funcionário.</small></div><div class="field new-employee-only"><label for="employee-pin">PIN do telefone</label><input id="employee-pin" type="password" inputmode="numeric" pattern="[0-9]{4,6}" minlength="4" maxlength="6" required></div>
+    <div class="field"><label for="employee-pay-amount">Valor combinado</label><input id="employee-pay-amount" type="number" min="0" step="0.01"></div><div class="field"><label for="employee-pay-frequency">Periodicidade</label><select id="employee-pay-frequency"><option value="monthly">Mensal</option><option value="weekly">Semanal</option><option value="daily">Por dia</option><option value="other">Outro</option></select></div>
+    <div class="field"><label for="employee-pay-day">Dia de receber</label><input id="employee-pay-day" type="number" min="1" max="31"></div><div class="field"><label for="employee-payment-status">Pagamento atual</label><select id="employee-payment-status"><option value="pending">Pendente</option><option value="paid">Pago</option></select></div>
+    <div class="field"><label for="employee-vacation-start">Início das férias</label><input id="employee-vacation-start" type="date"></div><div class="field"><label for="employee-vacation-end">Fim das férias</label><input id="employee-vacation-end" type="date"></div>
+    <div class="field full-field"><label for="employee-notes">Observações</label><textarea id="employee-notes" maxlength="1000"></textarea></div>
+  </div><div class="dialog-actions"><button class="button" type="button" data-close-dialog="employee-dialog">Cancelar</button><button class="button button-dark" type="submit">Salvar funcionário</button></div><p class="form-message" id="employee-message" role="status"></p></form>
+</dialog>
+
+<dialog class="admin-dialog compact-dialog" id="payment-dialog">
+  <form method="dialog" class="dialog-close-row"><button aria-label="Fechar" value="cancel">✕</button></form>
+  <form id="payment-form"><input id="payment-id" type="hidden"><p class="eyebrow">PAGAMENTOS</p><h2>Conta da pizzaria</h2><div class="form-grid">
+    <div class="field full-field"><label for="payment-title">Descrição</label><input id="payment-title" maxlength="140" required></div><div class="field"><label for="payment-category">Categoria</label><select id="payment-category"><option>Fornecedor</option><option>Simples Nacional</option><option>Obrigações contábeis</option><option>Outros tributos</option><option>Aluguel</option><option>Energia</option><option>Água</option><option>Gás</option><option>Manutenção</option><option>Outros</option></select></div><div class="field"><label for="payment-payee">Favorecido</label><input id="payment-payee" maxlength="140"></div>
+    <div class="field"><label for="payment-amount">Valor</label><input id="payment-amount" type="number" min="0" step="0.01" required></div><div class="field"><label for="payment-due-date">Vencimento</label><input id="payment-due-date" type="date" required></div><div class="field"><label for="payment-status">Status</label><select id="payment-status"><option value="pending">Pendente</option><option value="paid">Pago</option></select></div><div class="field"><label for="payment-recurrence">Repetição</label><select id="payment-recurrence"><option value="none">Não repetir</option><option value="monthly">Mensal</option><option value="weekly">Semanal</option><option value="annual">Anual</option></select></div>
+    <div class="field full-field"><label for="payment-notes">Observações</label><textarea id="payment-notes" maxlength="1000"></textarea></div>
+  </div><div class="dialog-actions"><button class="button" type="button" data-close-dialog="payment-dialog">Cancelar</button><button class="button button-dark" type="submit">Salvar conta</button></div><p class="form-message" id="payment-message" role="status"></p></form>
+</dialog>
+
+<dialog class="admin-dialog compact-dialog" id="inventory-dialog">
+  <form method="dialog" class="dialog-close-row"><button aria-label="Fechar" value="cancel">✕</button></form>
+  <form id="inventory-form"><input id="inventory-id" type="hidden"><p class="eyebrow">ESTOQUE</p><h2>Item de estoque</h2><div class="form-grid">
+    <div class="field full-field"><label for="inventory-name">Item</label><input id="inventory-name" maxlength="120" required></div><div class="field"><label for="inventory-category">Categoria</label><select id="inventory-category"><option>Frios</option><option>Insumos</option><option>Hortifruti</option><option>Bebidas</option><option>Cervejas</option><option>Destilados</option><option>Doces</option><option>Suprimentos</option><option>Outros</option></select></div><div class="field"><label for="inventory-supplier">Fornecedor</label><input id="inventory-supplier" list="supplier-options" maxlength="100" value="Não definido"><datalist id="supplier-options"><option value="CEASA"><option value="ASSAÍ"><option value="Atacadão"><option value="Villefort"><option value="Apoio Mineiro"><option value="Nova Safra"><option value="Não definido"></datalist></div>
+    <div class="field"><label for="inventory-current">Quantidade atual</label><input id="inventory-current" type="number" min="0" step="0.01" required></div><div class="field"><label for="inventory-minimum">Avisar abaixo de</label><input id="inventory-minimum" type="number" min="0" step="0.01" required></div><div class="field"><label for="inventory-unit">Unidade</label><input id="inventory-unit" maxlength="30" placeholder="kg, un, caixa"></div><div class="field"><label for="inventory-buy-quantity">Quantidade para comprar</label><input id="inventory-buy-quantity" type="number" min="0" step="0.01"></div>
+    <div class="field full-field"><label for="inventory-notes">Observações</label><textarea id="inventory-notes" maxlength="600"></textarea></div>
+  </div><div class="dialog-actions"><button class="button" type="button" data-close-dialog="inventory-dialog">Cancelar</button><button class="button button-dark" type="submit">Salvar item</button></div><p class="form-message" id="inventory-message" role="status"></p></form>
+</dialog>
+
+<dialog class="admin-dialog" id="recipe-dialog">
+  <form method="dialog" class="dialog-close-row"><button aria-label="Fechar" value="cancel">✕</button></form>
+  <form id="recipe-form"><input id="recipe-id" type="hidden"><p class="eyebrow">CADERNO</p><h2>Receita da Capannone</h2><div class="form-grid">
+    <div class="field"><label for="recipe-name">Nome</label><input id="recipe-name" maxlength="140" required></div><div class="field"><label for="recipe-category">Categoria</label><select id="recipe-category"><option value="recheios">Recheios</option><option value="molhos">Molhos</option><option value="massas">Massas</option><option value="pizzas">Pizzas</option><option value="bebidas">Bebidas</option><option value="doces">Doces</option><option value="preparos">Preparos</option><option value="outros">Outros</option></select></div>
+    <div class="field full-field"><label for="recipe-yield">Rendimento / tamanhos</label><input id="recipe-yield" maxlength="200"></div><div class="field full-field"><label for="recipe-ingredients">Ingredientes</label><textarea id="recipe-ingredients" rows="9" maxlength="8000" placeholder="Um ingrediente por linha" required></textarea></div><div class="field full-field"><label for="recipe-instructions">Modo de preparo</label><textarea id="recipe-instructions" rows="9" maxlength="10000"></textarea></div><div class="field full-field"><label for="recipe-notes">Observações</label><textarea id="recipe-notes" rows="4" maxlength="3000"></textarea></div>
+  </div><div class="dialog-actions"><button class="button" type="button" data-close-dialog="recipe-dialog">Cancelar</button><button class="button button-dark" type="submit">Salvar receita</button></div><p class="form-message" id="recipe-message" role="status"></p></form>
+</dialog>
+
+<section id="print-area" class="print-area" aria-hidden="true"></section>
+<noscript><p class="noscript">Ative o JavaScript para usar a gestão interna.</p></noscript>
+<script type="module" src="/js/magna.js?v=20260821-1"></script>
+</body>
+</html>
