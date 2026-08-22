@@ -48,7 +48,9 @@ O e-mail é somente o identificador de login. O painel não usa link de validaç
 - A Magna acessa `/magna` e gerencia pessoal, férias, pagamentos gerais, estoque, receitas, escalas e conversas internas.
 - A proprietária pode cadastrar, desativar ou excluir funcionários; a senha provisória precisa ser trocada no primeiro acesso.
 - Funcionários acessam `/funcionarios`, onde consultam o calendário, conversam com a Magna e registram o ponto.
-- O ponto permanece bloqueado enquanto a origem pública da rede Capannone Hotspot não estiver configurada no Worker.
+- A Magna reconhece uma vez a conexão da pizzaria em “Escalas e ponto”; o Worker guarda somente um identificador criptográfico dessa origem, sem expor o endereço público.
+- No primeiro acesso feito dentro da rede reconhecida, o navegador cria uma chave exclusiva e vincula a conta ao aparelho. Não são usados PIN, IMEI ou fingerprint invasivo.
+- Cada ponto exige ao mesmo tempo a rede Capannone e uma assinatura criptográfica do aparelho cadastrado. A troca de celular precisa ser liberada pela Magna.
 - A Magna abre “Super-administrador” pelo menu verde usando a sessão já autenticada, sem informar outra senha; as permissões continuam verificadas pelo Firebase e pelas regras do banco.
 
 O antigo acesso por credencial compartilhada foi aposentado. A senha Firebase de um usuário não depende de nenhum segredo do Worker.
@@ -63,7 +65,7 @@ Coleções/documentos principais do Firestore:
 - `espaco_fotos`: galeria pública do espaço para eventos. Os dois registros antigos em base64 continuam compatíveis; novos uploads usam URL de mídia.
 - `users`: perfil, papel, situação e obrigação de troca de senha.
 - `auditLogs`: trilha das ações administrativas.
-- `employees`: cadastro operacional e vínculo com a conta de cada funcionário.
+- `employees`: cadastro operacional e vínculo com a conta de cada funcionário. Registros antigos podem conservar `phonePinHash` apenas por compatibilidade; ele não é mais lido nem criado.
 - `internalPayments`: compromissos e pagamentos gerais, sem finalidade fiscal.
 - `inventoryItems`: estoque e listas de compras por fornecedor.
 - `recipes` e `recipeVersions`: receitas editáveis e histórico datado.
@@ -111,7 +113,13 @@ Rotas atuais:
 - `GET|HEAD /media/{id}`: entrega pública da mídia com cache e suporte a intervalo de bytes.
 - `DELETE /media/{id}`: exclusão autenticada.
 - `GET /hotspot/status`: confirma se a rede do funcionário é a origem cadastrada.
-- `POST /hotspot/clock`: valida rede, conta e PIN antes de registrar entrada ou saída.
+- `GET /hotspot/device`: informa o estado da rede e do vínculo do aparelho.
+- `POST /hotspot/device/challenge`: cria um desafio curto e de uso único para cadastro ou ponto.
+- `POST /hotspot/device/enroll`: cadastra a chave pública do primeiro aparelho, com prova de posse da chave privada.
+- `GET /hotspot/devices`: permite à Magna consultar quais funcionários já possuem aparelho cadastrado.
+- `POST /hotspot/device/reset`: remove o vínculo atual para permitir a troca de celular.
+- `POST /hotspot/network/authorize`: reconhece a conexão usada pela Magna como a rede da pizzaria, sem gravar o IP em texto aberto.
+- `POST /hotspot/clock`: valida rede, conta, desafio de uso único e assinatura do aparelho antes de registrar entrada ou saída.
 - `GET /hotspot/entries`: consulta protegida de registros próprios ou gerenciais.
 - `GET /campaigns`, `GET /content/history` e `GET|HEAD /images/{id}`: leitura temporária compatível com dados antigos em KV.
 
@@ -161,3 +169,7 @@ O site não oferece portal de autenticação de Wi-Fi. A disponibilidade da rede
 - “Super-administrador” aparece no menu verde da Magna e abre a página separada que controla acessos de marketing e funcionários.
 
 Senhas provisórias devem ser entregues por canal seguro e nunca registradas no Git, em documentos públicos ou em código.
+
+## 11. Preferências de interface
+
+As diretrizes visuais permanentes do projeto estão em `PROJECT-PREFERENCES.md`. Dados estruturados devem, sempre que possível, usar edição em planilha ou grade, com aparência profissional, responsiva e simples para pessoas não técnicas.

@@ -138,15 +138,83 @@ function allowedHotspotIps(env) {
   return String(env.HOTSPOT_ALLOWED_IPS || "").split(",").map((value) => value.trim()).filter(Boolean);
 }
 
-function hotspotStatus(request, env) {
+function networkIdentifier(ip) {
+  if (!ip.includes(":")) return `v4:${ip}`;
+  if (ip.includes(".")) return `v4:${ip.slice(ip.lastIndexOf(":") + 1)}`;
+  const halves = ip.toLowerCase().split("::"); const left = halves[0] ? halves[0].split(":") : []; const right = halves[1] ? halves[1].split(":") : []; const missing = Math.max(0, 8 - left.length - right.length); const expanded = [...left, ...Array(missing).fill("0"), ...right].map((part) => part.padStart(4, "0"));
+  return `v6-64:${expanded.slice(0, 4).join(":")}`;
+}
+
+async function hotspotStatus(request, env) {
   const allowed = allowedHotspotIps(env);
   const connectingIp = request.headers.get("CF-Connecting-IP") || "";
-  return { configured: allowed.length > 0, verified: allowed.includes(connectingIp) };
+  const storedNetwork = connectingIp ? await env.CAPANNONE_DATA.get(`hotspot-network:${await sha256(networkIdentifier(connectingIp))}`) : null;
+  const configured = allowed.length > 0 || Boolean(await env.CAPANNONE_DATA.get("hotspot-network:configured"));
+  return { configured, verified: allowed.includes(connectingIp) || Boolean(storedNetwork) };
+}
+
+async function authorizeCurrentNetwork(request, env, manager) {
+  const connectingIp = request.headers.get("CF-Connecting-IP") || ""; if (!connectingIp) throw new Error("network-unavailable");
+  const keys = []; let cursor;
+  do { const page = await env.CAPANNONE_DATA.list({ prefix: "hotspot-network:", limit: 1000, cursor }); keys.push(...page.keys.filter((item) => item.name !== "hotspot-network:configured")); cursor = page.list_complete ? undefined : page.cursor; } while (cursor);
+  await Promise.all(keys.map((item) => env.CAPANNONE_DATA.delete(item.name)));
+  const authorizedAt = new Date().toISOString(); const record = { authorizedAt, authorizedBy: manager.uid };
+  await Promise.all([env.CAPANNONE_DATA.put(`hotspot-network:${await sha256(networkIdentifier(connectingIp))}`, JSON.stringify(record)), env.CAPANNONE_DATA.put("hotspot-network:configured", JSON.stringify(record))]);
+  return record;
 }
 
 async function sha256(value) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function base64UrlEncode(value) {
+  let binary = "";
+  new Uint8Array(value).forEach((byte) => { binary += String.fromCharCode(byte); });
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function validPublicKey(value) {
+  return value && typeof value === "object" && value.kty === "EC" && value.crv === "P-256"
+    && typeof value.x === "string" && /^[A-Za-z0-9_-]{42,44}$/.test(value.x)
+    && typeof value.y === "string" && /^[A-Za-z0-9_-]{42,44}$/.test(value.y)
+    && !value.d;
+}
+
+function publicDevice(record) {
+  if (!record) return null;
+  return { uid: record.uid, deviceId: record.deviceId, enrolledAt: record.enrolledAt };
+}
+
+async function loadDevice(env, uid) {
+  return env.CAPANNONE_DATA.get(`hotspot-device:${uid}`, "json");
+}
+
+async function listDevices(env) {
+  const keys = []; let cursor;
+  do {
+    const page = await env.CAPANNONE_DATA.list({ prefix: "hotspot-device:", limit: 1000, cursor });
+    keys.push(...page.keys); cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  return (await Promise.all(keys.map((item) => env.CAPANNONE_DATA.get(item.name, "json")))).filter(Boolean).map(publicDevice);
+}
+
+async function issueDeviceChallenge(env, employee, action) {
+  const challengeId = crypto.randomUUID(); const bytes = crypto.getRandomValues(new Uint8Array(32)); const challenge = base64UrlEncode(bytes.buffer); const expiresAt = Date.now() + 120000;
+  await env.CAPANNONE_DATA.put(`hotspot-challenge:${employee.uid}:${challengeId}`, JSON.stringify({ uid: employee.uid, action, challenge, expiresAt }), { expirationTtl: 180 });
+  return { challengeId, challenge, expiresAt: new Date(expiresAt).toISOString() };
+}
+
+async function verifyDeviceChallenge(env, uid, action, challengeId, signature, publicKey) {
+  if (!/^[a-f0-9-]{36}$/i.test(challengeId) || !/^[A-Za-z0-9_-]{60,120}$/.test(signature)) return false;
+  const keyName = `hotspot-challenge:${uid}:${challengeId}`; const challenge = await env.CAPANNONE_DATA.get(keyName, "json");
+  if (!challenge || challenge.uid !== uid || challenge.action !== action || Number(challenge.expiresAt) < Date.now()) return false;
+  try {
+    const key = await crypto.subtle.importKey("jwk", publicKey, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
+    const verified = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, key, base64UrlBytes(signature), new TextEncoder().encode(challenge.challenge));
+    if (!verified) return false;
+    await env.CAPANNONE_DATA.delete(keyName); return true;
+  } catch (_) { return false; }
 }
 
 async function listTimeEntries(env, prefix, limit = 250) {
@@ -175,6 +243,8 @@ function hasValidSignature(bytes, contentType) {
   if (contentType === "video/webm") return bytes[0] === 0x1a && bytes[1] === 0x45 && bytes[2] === 0xdf && bytes[3] === 0xa3;
   return false;
 }
+
+export const __securityTest = Object.freeze({ networkIdentifier, validPublicKey, issueDeviceChallenge, verifyDeviceChallenge });
 
 function publicLegacyItem(item, request) {
   return { ...item, imageUrl: `${new URL(request.url).origin}/images/${item.id}` };
@@ -224,7 +294,64 @@ export default {
     if (path === "/hotspot/status" && request.method === "GET") {
       try { await requireEmployee(request); }
       catch (_) { return fail(request, "Sessão de funcionário inválida.", 401); }
-      return json(request, hotspotStatus(request, env));
+      return json(request, await hotspotStatus(request, env));
+    }
+
+    if (path === "/hotspot/device" && request.method === "GET") {
+      let employee;
+      try { employee = await requireEmployee(request); }
+      catch (_) { return fail(request, "Sessão de funcionário inválida.", 401); }
+      const device = await loadDevice(env, employee.uid);
+      return json(request, { network: await hotspotStatus(request, env), device: publicDevice(device) });
+    }
+
+    if (path === "/hotspot/device/challenge" && request.method === "POST") {
+      if (!allowedOrigin(origin)) return fail(request, "Origem não autorizada.", 403);
+      let employee;
+      try { employee = await requireEmployee(request); }
+      catch (_) { return fail(request, "Sessão de funcionário inválida.", 401); }
+      const network = await hotspotStatus(request, env); if (!network.configured) return fail(request, "O relógio de ponto ainda aguarda a configuração do Hotspot.", 503); if (!network.verified) return fail(request, "Conecte-se à rede Capannone Hotspot.", 403);
+      let payload; try { payload = await request.json(); } catch (_) { return fail(request, "Solicitação inválida.", 400); }
+      const action = payload?.action === "enroll" ? "enroll" : payload?.action === "clock" ? "clock" : ""; if (!action) return fail(request, "Finalidade inválida.", 400);
+      const device = await loadDevice(env, employee.uid); if (action === "enroll" && device) return fail(request, "Esta conta já possui um aparelho cadastrado.", 409); if (action === "clock" && !device) return fail(request, "Cadastre este aparelho antes de registrar o ponto.", 409);
+      return json(request, await issueDeviceChallenge(env, employee, action), 201);
+    }
+
+    if (path === "/hotspot/device/enroll" && request.method === "POST") {
+      if (!allowedOrigin(origin)) return fail(request, "Origem não autorizada.", 403);
+      let employee;
+      try { employee = await requireEmployee(request); }
+      catch (_) { return fail(request, "Sessão de funcionário inválida.", 401); }
+      const network = await hotspotStatus(request, env); if (!network.configured) return fail(request, "O relógio de ponto ainda aguarda a configuração do Hotspot.", 503); if (!network.verified) return fail(request, "Conecte-se à rede Capannone Hotspot.", 403);
+      if (await loadDevice(env, employee.uid)) return fail(request, "Esta conta já possui um aparelho cadastrado.", 409);
+      let payload; try { payload = await request.json(); } catch (_) { return fail(request, "Cadastro do aparelho inválido.", 400); }
+      if (!validPublicKey(payload?.publicKey)) return fail(request, "Chave do aparelho inválida.", 400);
+      const verified = await verifyDeviceChallenge(env, employee.uid, "enroll", String(payload.challengeId || ""), String(payload.signature || ""), payload.publicKey); if (!verified) return fail(request, "Não foi possível confirmar este aparelho.", 403);
+      const enrolledAt = new Date().toISOString(); const deviceId = (await sha256(JSON.stringify({ crv: payload.publicKey.crv, kty: payload.publicKey.kty, x: payload.publicKey.x, y: payload.publicKey.y }))).slice(0, 12); const record = { uid: employee.uid, deviceId, publicKey: payload.publicKey, enrolledAt };
+      await env.CAPANNONE_DATA.put(`hotspot-device:${employee.uid}`, JSON.stringify(record)); return json(request, { ok: true, device: publicDevice(record) }, 201);
+    }
+
+    if (path === "/hotspot/devices" && request.method === "GET") {
+      try { await requireInternalManager(request); }
+      catch (_) { return fail(request, "Acesso não autorizado.", 403); }
+      return json(request, { items: await listDevices(env) });
+    }
+
+    if (path === "/hotspot/network/authorize" && request.method === "POST") {
+      if (!allowedOrigin(origin)) return fail(request, "Origem não autorizada.", 403);
+      let manager; try { manager = await requireInternalManager(request); }
+      catch (_) { return fail(request, "Acesso não autorizado.", 403); }
+      try { const record = await authorizeCurrentNetwork(request, env, manager); return json(request, { ok: true, configured: true, verified: true, authorizedAt: record.authorizedAt }); }
+      catch (_) { return fail(request, "Não foi possível reconhecer esta conexão.", 400); }
+    }
+
+    if (path === "/hotspot/device/reset" && request.method === "POST") {
+      if (!allowedOrigin(origin)) return fail(request, "Origem não autorizada.", 403);
+      try { await requireInternalManager(request); }
+      catch (_) { return fail(request, "Acesso não autorizado.", 403); }
+      let payload; try { payload = await request.json(); } catch (_) { return fail(request, "Solicitação inválida.", 400); }
+      const uid = String(payload?.uid || ""); if (!/^[A-Za-z0-9_-]{20,128}$/.test(uid)) return fail(request, "Funcionário inválido.", 400);
+      await env.CAPANNONE_DATA.delete(`hotspot-device:${uid}`); return json(request, { ok: true });
     }
 
     if (path === "/hotspot/clock" && request.method === "POST") {
@@ -232,21 +359,18 @@ export default {
       let employee;
       try { employee = await requireEmployee(request); }
       catch (_) { return fail(request, "Sessão de funcionário inválida.", 401); }
-      const network = hotspotStatus(request, env);
+      const network = await hotspotStatus(request, env);
       if (!network.configured) return fail(request, "O relógio de ponto ainda aguarda a configuração do Hotspot.", 503);
       if (!network.verified) return fail(request, "Conecte-se à rede Capannone Hotspot para registrar o ponto.", 403);
       let payload;
       try { payload = await request.json(); }
       catch (_) { return fail(request, "Dados do ponto inválidos.", 400); }
-      const pin = String(payload?.pin || "");
-      if (!/^\d{4,6}$/.test(pin)) return fail(request, "Informe o PIN de 4 a 6 números.", 400);
       const employeeResponse = await fetch(`${FIRESTORE_EMPLOYEES}/${encodeURIComponent(employee.uid)}`, { headers: { Authorization: `Bearer ${employee.token}`, Accept: "application/json" } });
       if (!employeeResponse.ok) return fail(request, "Cadastro do funcionário não encontrado.", 403);
       const employeeDocument = await employeeResponse.json();
       const employeeFields = employeeDocument.fields || {};
-      const expectedHash = firestoreString(employeeFields, "phonePinHash");
-      const informedHash = await sha256(`${employee.uid}:${pin}`);
-      if (!expectedHash || informedHash !== expectedHash) return fail(request, "PIN do telefone inválido.", 403);
+      const device = await loadDevice(env, employee.uid); if (!device || !validPublicKey(device.publicKey)) return fail(request, "Este aparelho ainda não foi cadastrado.", 403);
+      const verified = await verifyDeviceChallenge(env, employee.uid, "clock", String(payload?.challengeId || ""), String(payload?.signature || ""), device.publicKey); if (!verified) return fail(request, "Este aparelho não foi reconhecido.", 403);
       const previous = (await listTimeEntries(env, `time:${employee.uid}:`, 1000))[0];
       if (previous && Date.now() - new Date(previous.timestamp).getTime() < 60000) return fail(request, "Aguarde um minuto antes de registrar novamente.", 429);
       const timestamp = new Date().toISOString();
@@ -257,7 +381,8 @@ export default {
         displayName: firestoreString(employeeFields, "displayName") || firestoreString(employee.fields, "displayName") || employee.email,
         type: previous?.type === "entrada" ? "saida" : "entrada",
         timestamp,
-        source: "capannone-hotspot"
+        source: "capannone-hotspot-device",
+        deviceId: device.deviceId
       };
       await env.CAPANNONE_DATA.put(`time:${employee.uid}:${timestamp}:${entry.id}`, JSON.stringify(entry), { metadata: { uid: employee.uid, type: entry.type } });
       return json(request, { ok: true, entry }, 201);
@@ -273,7 +398,7 @@ export default {
       if (!isEmployeeProfile && !isManager) return fail(request, "Acesso não autorizado.", 403);
       const prefix = isEmployeeProfile ? `time:${profile.uid}:` : "time:";
       const items = await listTimeEntries(env, prefix, isEmployeeProfile ? 250 : 1000);
-      return json(request, { items: items.slice(0, isEmployeeProfile ? 100 : 300), ...hotspotStatus(request, env) });
+      return json(request, { items: items.slice(0, isEmployeeProfile ? 100 : 300), ...(await hotspotStatus(request, env)) });
     }
 
     if (path === "/campaigns" && request.method === "GET") {
