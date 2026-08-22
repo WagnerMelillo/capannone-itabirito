@@ -6,6 +6,10 @@ service cloud.firestore {
       return 'n7YwMAtBWrZmQUkTwfDQr5mnQsB2';
     }
 
+    function magnaEmail() {
+      return 'magnamelillo@gmail.com';
+    }
+
     function signedIn() {
       return request.auth != null;
     }
@@ -14,10 +18,14 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isActiveAdmin() {
+    function isActiveProfile() {
       return signedIn()
         && currentProfile().active == true
-        && currentProfile().mustChangePassword == false
+        && currentProfile().mustChangePassword == false;
+    }
+
+    function isActiveAdmin() {
+      return isActiveProfile()
         && (
           currentProfile().role == 'admin'
           || (request.auth.uid == ownerUid() && currentProfile().role == 'superadmin')
@@ -30,19 +38,37 @@ service cloud.firestore {
         && currentProfile().role == 'superadmin';
     }
 
+    function isMagna() {
+      return isActiveProfile()
+        && currentProfile().role == 'admin'
+        && currentProfile().email == magnaEmail();
+    }
+
+    function isInternalManager() {
+      return isMagna() || isSuperadmin();
+    }
+
+    function isEmployee() {
+      return isActiveProfile() && currentProfile().role == 'employee';
+    }
+
     function validUser(data) {
       return data.keys().hasAll(['displayName', 'email', 'role', 'active', 'mustChangePassword', 'updatedAt'])
         && data.keys().hasOnly(['displayName', 'email', 'role', 'active', 'mustChangePassword', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy', 'passwordChangedAt'])
         && data.displayName is string && data.displayName.size() <= 100
         && data.email is string && data.email.size() <= 200
-        && data.role in ['admin', 'superadmin']
+        && data.role in ['admin', 'superadmin', 'employee']
         && data.active is bool
         && data.mustChangePassword is bool
         && data.updatedAt is string;
     }
 
     match /users/{uid} {
-      allow read: if signedIn() && (request.auth.uid == uid || isSuperadmin());
+      allow read: if signedIn() && (
+        request.auth.uid == uid
+        || isSuperadmin()
+        || (isMagna() && resource.data.role == 'employee')
+      );
       allow create: if validUser(request.resource.data) && (
         (
           request.auth.uid == ownerUid()
@@ -55,6 +81,11 @@ service cloud.firestore {
           && uid != ownerUid()
           && request.resource.data.role == 'admin'
         )
+        || (
+          isMagna()
+          && uid != ownerUid()
+          && request.resource.data.role == 'employee'
+        )
       );
       allow update: if validUser(request.resource.data) && (
         (
@@ -62,6 +93,13 @@ service cloud.firestore {
           && uid != ownerUid()
           && resource.data.role == 'admin'
           && request.resource.data.role == 'admin'
+          && request.resource.data.email == resource.data.email
+        )
+        || (
+          isMagna()
+          && uid != ownerUid()
+          && resource.data.role == 'employee'
+          && request.resource.data.role == 'employee'
           && request.resource.data.email == resource.data.email
         )
         || (
@@ -73,6 +111,142 @@ service cloud.firestore {
         )
       );
       allow delete: if false;
+    }
+
+    function validEmployee(data) {
+      return data.keys().hasAll(['displayName', 'email', 'jobTitle', 'payAmount', 'payFrequency', 'payDay', 'paymentStatus', 'vacationStart', 'vacationEnd', 'notes', 'active', 'phonePinHash', 'updatedAt', 'updatedBy'])
+        && data.keys().hasOnly(['displayName', 'email', 'jobTitle', 'payAmount', 'payFrequency', 'payDay', 'paymentStatus', 'vacationStart', 'vacationEnd', 'notes', 'active', 'phonePinHash', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy'])
+        && data.displayName is string && data.displayName.size() > 0 && data.displayName.size() <= 100
+        && data.email is string && data.email.size() <= 200
+        && data.jobTitle is string && data.jobTitle.size() <= 100
+        && data.payAmount is number && data.payAmount >= 0
+        && data.payFrequency in ['monthly', 'weekly', 'daily', 'other']
+        && data.payDay is number && data.payDay >= 0 && data.payDay <= 31
+        && data.paymentStatus in ['pending', 'paid']
+        && data.vacationStart is string && data.vacationStart.size() <= 20
+        && data.vacationEnd is string && data.vacationEnd.size() <= 20
+        && data.notes is string && data.notes.size() <= 1000
+        && data.active is bool
+        && data.phonePinHash is string && data.phonePinHash.size() == 64
+        && data.updatedAt is string
+        && data.updatedBy == request.auth.uid;
+    }
+
+    match /employees/{uid} {
+      allow read: if isInternalManager() || (isEmployee() && request.auth.uid == uid);
+      allow create: if isMagna()
+        && validEmployee(request.resource.data)
+        && request.resource.data.email == getAfter(/databases/$(database)/documents/users/$(uid)).data.email;
+      allow update: if isMagna()
+        && validEmployee(request.resource.data)
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.phonePinHash == resource.data.phonePinHash;
+      allow delete: if false;
+    }
+
+    function validPayment(data) {
+      return data.keys().hasAll(['title', 'category', 'payee', 'amount', 'dueDate', 'status', 'recurrence', 'notes', 'updatedAt', 'updatedBy'])
+        && data.keys().hasOnly(['title', 'category', 'payee', 'amount', 'dueDate', 'status', 'recurrence', 'notes', 'paidAt', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy'])
+        && data.title is string && data.title.size() > 0 && data.title.size() <= 140
+        && data.category is string && data.category.size() <= 80
+        && data.payee is string && data.payee.size() <= 140
+        && data.amount is number && data.amount >= 0
+        && data.dueDate is string && data.dueDate.size() <= 20
+        && data.status in ['pending', 'paid']
+        && data.recurrence in ['none', 'monthly', 'weekly', 'annual']
+        && data.notes is string && data.notes.size() <= 1000
+        && data.updatedAt is string && data.updatedBy == request.auth.uid;
+    }
+
+    match /internalPayments/{paymentId} {
+      allow read: if isInternalManager();
+      allow create, update: if isInternalManager() && validPayment(request.resource.data);
+      allow delete: if isInternalManager();
+    }
+
+    function validInventoryItem(data) {
+      return data.keys().hasAll(['name', 'category', 'supplier', 'currentQuantity', 'minimumQuantity', 'unit', 'buyQuantity', 'notes', 'updatedAt', 'updatedBy'])
+        && data.keys().hasOnly(['name', 'category', 'supplier', 'currentQuantity', 'minimumQuantity', 'unit', 'buyQuantity', 'notes', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 120
+        && data.category is string && data.category.size() <= 80
+        && data.supplier is string && data.supplier.size() <= 100
+        && data.currentQuantity is number && data.currentQuantity >= 0
+        && data.minimumQuantity is number && data.minimumQuantity >= 0
+        && data.unit is string && data.unit.size() <= 30
+        && data.buyQuantity is number && data.buyQuantity >= 0
+        && data.notes is string && data.notes.size() <= 600
+        && data.updatedAt is string && data.updatedBy == request.auth.uid;
+    }
+
+    match /inventoryItems/{itemId} {
+      allow read: if isInternalManager();
+      allow create, update: if isInternalManager() && validInventoryItem(request.resource.data);
+      allow delete: if isInternalManager();
+    }
+
+    function validRecipe(data) {
+      return data.keys().hasAll(['name', 'category', 'yield', 'ingredients', 'instructions', 'notes', 'active', 'updatedAt', 'updatedBy'])
+        && data.keys().hasOnly(['name', 'category', 'yield', 'ingredients', 'instructions', 'notes', 'active', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy'])
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 140
+        && data.category in ['recheios', 'molhos', 'massas', 'pizzas', 'bebidas', 'doces', 'preparos', 'outros']
+        && data.yield is string && data.yield.size() <= 200
+        && data.ingredients is string && data.ingredients.size() <= 8000
+        && data.instructions is string && data.instructions.size() <= 10000
+        && data.notes is string && data.notes.size() <= 3000
+        && data.active is bool
+        && data.updatedAt is string && data.updatedBy == request.auth.uid;
+    }
+
+    match /recipes/{recipeId} {
+      allow read: if isInternalManager();
+      allow create, update: if isInternalManager() && validRecipe(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /recipeVersions/{versionId} {
+      allow read: if isInternalManager();
+      allow create: if isInternalManager()
+        && request.resource.data.keys().hasAll(['recipeId', 'snapshot', 'versionedAt', 'versionedBy', 'versionedByName'])
+        && request.resource.data.keys().hasOnly(['recipeId', 'snapshot', 'versionedAt', 'versionedBy', 'versionedByName'])
+        && request.resource.data.recipeId is string
+        && request.resource.data.snapshot is map
+        && request.resource.data.versionedAt is string
+        && request.resource.data.versionedBy == request.auth.uid
+        && request.resource.data.versionedByName is string;
+      allow update, delete: if false;
+    }
+
+    function validShift(data) {
+      return data.keys().hasAll(['employeeId', 'date', 'startTime', 'endTime', 'note', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy'])
+        && data.keys().hasOnly(['employeeId', 'date', 'startTime', 'endTime', 'note', 'createdAt', 'createdBy', 'updatedAt', 'updatedBy'])
+        && data.employeeId is string
+        && data.date is string && data.date.size() <= 20
+        && data.startTime is string && data.startTime.size() <= 10
+        && data.endTime is string && data.endTime.size() <= 10
+        && data.note is string && data.note.size() <= 240
+        && data.updatedAt is string && data.updatedBy == request.auth.uid;
+    }
+
+    match /workShifts/{shiftId} {
+      allow read: if isInternalManager() || (isEmployee() && resource.data.employeeId == request.auth.uid);
+      allow create, update: if isInternalManager() && validShift(request.resource.data);
+      allow delete: if isInternalManager();
+    }
+
+    match /staffMessages/{messageId} {
+      allow read: if isInternalManager() || isEmployee();
+      allow create: if (isInternalManager() || isEmployee())
+        && request.resource.data.keys().hasAll(['text', 'senderUid', 'senderEmail', 'senderName', 'senderRole', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['text', 'senderUid', 'senderEmail', 'senderName', 'senderRole', 'createdAt'])
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 1000
+        && request.resource.data.senderUid == request.auth.uid
+        && request.resource.data.senderEmail is string
+        && request.resource.data.senderName is string
+        && request.resource.data.senderRole == currentProfile().role
+        && request.resource.data.createdAt is string;
+      allow update, delete: if false;
     }
 
     function validMenuItem(data) {

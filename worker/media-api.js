@@ -1,8 +1,10 @@
 const PROJECT_ID = "capannone-itabirito";
 const SUPERADMIN_UID = "n7YwMAtBWrZmQUkTwfDQr5mnQsB2";
+const MAGNA_EMAIL = "magnamelillo@gmail.com";
 const TOKEN_ISSUER = `https://securetoken.google.com/${PROJECT_ID}`;
 const FIREBASE_JWKS = "https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com";
 const FIRESTORE_USERS = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/users`;
+const FIRESTORE_EMPLOYEES = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/employees`;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 20 * 1024 * 1024;
 const MAX_REQUEST_BYTES = 22 * 1024 * 1024;
@@ -88,7 +90,7 @@ async function verifyFirebaseToken(token) {
   return payload;
 }
 
-async function requireAdmin(request) {
+async function requireProfile(request) {
   const authorization = request.headers.get("Authorization") || "";
   const match = authorization.match(/^Bearer\s+([^\s]+)$/i);
   if (!match) throw new Error("missing-token");
@@ -103,9 +105,60 @@ async function requireAdmin(request) {
   const role = fields.role?.stringValue || "";
   const active = fields.active?.booleanValue === true;
   const mustChangePassword = fields.mustChangePassword?.booleanValue !== false;
-  const authorizedRole = role === "admin" || (role === "superadmin" && claims.sub === SUPERADMIN_UID);
-  if (!active || mustChangePassword || !authorizedRole) throw new Error("profile-not-authorized");
-  return { uid: claims.sub, email: claims.email || "", role };
+  if (!active || mustChangePassword) throw new Error("profile-not-authorized");
+  return { uid: claims.sub, email: claims.email || fields.email?.stringValue || "", role, token, fields };
+}
+
+async function requireAdmin(request) {
+  const profile = await requireProfile(request);
+  const authorizedRole = profile.role === "admin" || (profile.role === "superadmin" && profile.uid === SUPERADMIN_UID);
+  if (!authorizedRole) throw new Error("profile-not-authorized");
+  return profile;
+}
+
+async function requireInternalManager(request) {
+  const profile = await requireProfile(request);
+  const allowed = (profile.role === "superadmin" && profile.uid === SUPERADMIN_UID)
+    || (profile.role === "admin" && profile.email.toLowerCase() === MAGNA_EMAIL);
+  if (!allowed) throw new Error("profile-not-authorized");
+  return profile;
+}
+
+async function requireEmployee(request) {
+  const profile = await requireProfile(request);
+  if (profile.role !== "employee") throw new Error("profile-not-authorized");
+  return profile;
+}
+
+function firestoreString(fields, name) {
+  return fields?.[name]?.stringValue || "";
+}
+
+function allowedHotspotIps(env) {
+  return String(env.HOTSPOT_ALLOWED_IPS || "").split(",").map((value) => value.trim()).filter(Boolean);
+}
+
+function hotspotStatus(request, env) {
+  const allowed = allowedHotspotIps(env);
+  const connectingIp = request.headers.get("CF-Connecting-IP") || "";
+  return { configured: allowed.length > 0, verified: allowed.includes(connectingIp) };
+}
+
+async function sha256(value) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function listTimeEntries(env, prefix, limit = 250) {
+  const keys = [];
+  let cursor;
+  do {
+    const page = await env.CAPANNONE_DATA.list({ prefix, limit: Math.min(1000, limit - keys.length), cursor });
+    keys.push(...page.keys);
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor && keys.length < limit);
+  const items = (await Promise.all(keys.map(async (item) => env.CAPANNONE_DATA.get(item.name, "json")))).filter(Boolean);
+  return items.sort((a, b) => String(b.timestamp).localeCompare(String(a.timestamp)));
 }
 
 function mediaKind(contentType) {
@@ -167,6 +220,61 @@ export default {
       return new Response(null, { status: 204, headers: corsHeaders(request) });
     }
     if (path === "/health" && request.method === "GET") return json(request, { ok: true, service: "capannone-media", auth: "firebase" });
+
+    if (path === "/hotspot/status" && request.method === "GET") {
+      try { await requireEmployee(request); }
+      catch (_) { return fail(request, "Sessão de funcionário inválida.", 401); }
+      return json(request, hotspotStatus(request, env));
+    }
+
+    if (path === "/hotspot/clock" && request.method === "POST") {
+      if (!allowedOrigin(origin)) return fail(request, "Origem não autorizada.", 403);
+      let employee;
+      try { employee = await requireEmployee(request); }
+      catch (_) { return fail(request, "Sessão de funcionário inválida.", 401); }
+      const network = hotspotStatus(request, env);
+      if (!network.configured) return fail(request, "O relógio de ponto ainda aguarda a configuração do Hotspot.", 503);
+      if (!network.verified) return fail(request, "Conecte-se à rede Capannone Hotspot para registrar o ponto.", 403);
+      let payload;
+      try { payload = await request.json(); }
+      catch (_) { return fail(request, "Dados do ponto inválidos.", 400); }
+      const pin = String(payload?.pin || "");
+      if (!/^\d{4,6}$/.test(pin)) return fail(request, "Informe o PIN de 4 a 6 números.", 400);
+      const employeeResponse = await fetch(`${FIRESTORE_EMPLOYEES}/${encodeURIComponent(employee.uid)}`, { headers: { Authorization: `Bearer ${employee.token}`, Accept: "application/json" } });
+      if (!employeeResponse.ok) return fail(request, "Cadastro do funcionário não encontrado.", 403);
+      const employeeDocument = await employeeResponse.json();
+      const employeeFields = employeeDocument.fields || {};
+      const expectedHash = firestoreString(employeeFields, "phonePinHash");
+      const informedHash = await sha256(`${employee.uid}:${pin}`);
+      if (!expectedHash || informedHash !== expectedHash) return fail(request, "PIN do telefone inválido.", 403);
+      const previous = (await listTimeEntries(env, `time:${employee.uid}:`, 1000))[0];
+      if (previous && Date.now() - new Date(previous.timestamp).getTime() < 60000) return fail(request, "Aguarde um minuto antes de registrar novamente.", 429);
+      const timestamp = new Date().toISOString();
+      const entry = {
+        id: crypto.randomUUID(),
+        uid: employee.uid,
+        email: employee.email,
+        displayName: firestoreString(employeeFields, "displayName") || firestoreString(employee.fields, "displayName") || employee.email,
+        type: previous?.type === "entrada" ? "saida" : "entrada",
+        timestamp,
+        source: "capannone-hotspot"
+      };
+      await env.CAPANNONE_DATA.put(`time:${employee.uid}:${timestamp}:${entry.id}`, JSON.stringify(entry), { metadata: { uid: employee.uid, type: entry.type } });
+      return json(request, { ok: true, entry }, 201);
+    }
+
+    if (path === "/hotspot/entries" && request.method === "GET") {
+      let profile;
+      try { profile = await requireProfile(request); }
+      catch (_) { return fail(request, "Sessão inválida.", 401); }
+      const isEmployeeProfile = profile.role === "employee";
+      const isManager = (profile.role === "superadmin" && profile.uid === SUPERADMIN_UID)
+        || (profile.role === "admin" && profile.email.toLowerCase() === MAGNA_EMAIL);
+      if (!isEmployeeProfile && !isManager) return fail(request, "Acesso não autorizado.", 403);
+      const prefix = isEmployeeProfile ? `time:${profile.uid}:` : "time:";
+      const items = await listTimeEntries(env, prefix, isEmployeeProfile ? 250 : 1000);
+      return json(request, { items: items.slice(0, isEmployeeProfile ? 100 : 300), ...hotspotStatus(request, env) });
+    }
 
     if (path === "/campaigns" && request.method === "GET") {
       const items = await env.CAPANNONE_DATA.get("campaigns", "json") || [];

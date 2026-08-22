@@ -1,6 +1,9 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /marketing
+Disallow: /magna
+Disallow: /funcionarios
 Disallow: /api/
 
 Sitemap: https://capannone.dasmmelhores.com/sitemap.xml

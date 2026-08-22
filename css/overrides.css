@@ -22,6 +22,8 @@
 .campaign-card-no-image{background:linear-gradient(135deg,var(--forest),var(--forest-2))}
 .campaign-card-no-image>div{inset:0;display:flex;flex-direction:column;justify-content:end;background:linear-gradient(transparent,rgba(7,22,15,.7))}
 .footer-wifi-note{display:block;margin-top:10px;color:#aabdb0;font-size:10px;line-height:1.45}
+.footer-internal-link{display:inline-block;margin-top:12px;color:#aabdb0;font-size:10px;opacity:.62;text-decoration:none}
+.footer-internal-link:hover,.footer-internal-link:focus-visible{color:#fff;opacity:1;text-decoration:underline}
 
 @media(max-width:640px){
   .quick-grid{grid-template-columns:1fr}

@@ -10,6 +10,18 @@
   Cache-Control: no-store
   X-Robots-Tag: noindex, nofollow
 
+/marketing*
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
+/magna*
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
+/funcionarios*
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+
 /js/*
   Cache-Control: no-cache
 
