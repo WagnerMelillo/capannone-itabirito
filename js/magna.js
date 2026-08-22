@@ -507,7 +507,7 @@ function startPrint(nodes, mode = "") {
 function printRecipes(items) {
   if (!items.length) return toast("Selecione pelo menos uma receita para imprimir.", "error"); const fillings = items.filter((item) => item.category === "recheios"); const others = items.filter((item) => item.category !== "recheios"); const sheets = []; const fillingPages = [];
   fillings.forEach((item) => { const ingredientLines = clean(item.ingredients, 8000).split(/\r?\n/).filter(Boolean).length; const textLines = Math.ceil((clean(item.instructions, 10000).length + clean(item.notes, 3000).length) / 90); const weight = Math.max(8, ingredientLines + textLines + 5); const current = fillingPages.at(-1); const currentWeight = current?.reduce((total, entry) => total + entry.weight, 0) || 0; if (!current || current.length >= 4 || currentWeight + weight > 42) fillingPages.push([{ item, weight }]); else current.push({ item, weight }); });
-  fillingPages.forEach((page) => sheets.push(buildFillingPage(page.map((entry) => entry.item)));
+  fillingPages.forEach((page) => sheets.push(buildFillingPage(page.map((entry) => entry.item))));
   others.forEach((item) => sheets.push(buildRecipeSheet(item))); startPrint(sheets, fillings.length ? "printing-recipes" : "");
 }
 
