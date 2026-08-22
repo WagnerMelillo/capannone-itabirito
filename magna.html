@@ -9,7 +9,7 @@
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/css/site.css?v=20260808-2">
 <link rel="stylesheet" href="/css/admin-overrides.css?v=20260809-1">
-<link rel="stylesheet" href="/css/internal.css?v=20260822-4">
+<link rel="stylesheet" href="/css/internal.css?v=20260822-5">
 </head>
 <body class="admin-v2-page internal-page">
 <a class="skip-link" href="#internal-content">Pular para o conteúdo</a>
@@ -105,7 +105,7 @@
 
       <section class="admin-view" data-view="recipes" hidden>
         <div class="view-heading"><div><p class="eyebrow">RECEITAS</p><h1>Caderno da Capannone.</h1><p>Cada alteração guarda automaticamente a versão anterior, com data. Os recheios são organizados automaticamente em folhas A4 verticais.</p></div><button class="button button-order" id="new-recipe-button" type="button">Nova receita</button></div>
-        <div class="list-toolbar"><input id="recipe-search" type="search" placeholder="Buscar receita"><select id="recipe-category-filter"><option value="">Todas as categorias</option><option value="recheios">Recheios</option><option value="molhos">Molhos</option><option value="massas">Massas</option><option value="pizzas">Pizzas</option><option value="bebidas">Bebidas</option><option value="doces">Doces</option><option value="preparos">Preparos</option><option value="outros">Outros</option></select></div>
+        <div class="list-toolbar recipe-filter-toolbar"><input id="recipe-search" type="search" placeholder="Buscar receita"><select id="recipe-category-filter" aria-label="Filtrar receitas por categoria"><option value="">Todas as categorias</option><option value="recheios">Recheios</option><option value="molhos">Molhos</option><option value="massas">Massas</option><option value="pizzas">Pizzas</option><option value="bebidas">Bebidas</option><option value="doces">Doces</option><option value="preparos">Preparos</option><option value="outros">Outros</option></select><output class="recipe-results-count" id="recipe-results-count" aria-live="polite"><strong id="recipe-results-number">0</strong><span id="recipe-results-label">itens encontrados</span></output></div>
         <div class="selection-toolbar" aria-live="polite"><p><strong id="recipe-selection-count">0 receitas selecionadas</strong><span>A impressão usa fonte mínima de 12 pt e inclui quantas receitas couberem em cada folha.</span></p><div><button class="small-action" id="select-visible-recipes" type="button">Selecionar visíveis</button><button class="small-action" id="clear-recipe-selection" type="button">Limpar seleção</button><button class="button button-dark" id="print-selected-recipes" type="button" disabled>Imprimir selecionadas</button></div></div>
         <div class="recipe-grid" id="recipe-list"></div>
       </section>
@@ -173,6 +173,6 @@
 
 <section id="print-area" class="print-area" aria-hidden="true"></section>
 <noscript><p class="noscript">Ative o JavaScript para usar a gestão interna.</p></noscript>
-<script type="module" src="/js/magna.js?v=20260822-5"></script>
+<script type="module" src="/js/magna.js?v=20260822-6"></script>
 </body>
 </html>
