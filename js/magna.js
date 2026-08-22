@@ -317,6 +317,8 @@ function filteredRecipes() {
 
 function renderRecipes() {
   const holder = $("#recipe-list"); const items = filteredRecipes(); updateRecipeSelectionSummary();
+  $("#recipe-results-number").textContent = String(items.length);
+  $("#recipe-results-label").textContent = items.length === 1 ? "item encontrado" : "itens encontrados";
   if (!items.length) return holder.replaceChildren(empty("Nenhuma receita encontrada."));
   holder.replaceChildren(...items.map((item) => {
     const card = el("article", "recipe-card"); const title = el("div", "selectable-card-heading"); const selector = el("label", "item-selector"); const checkbox = el("input"); checkbox.type = "checkbox"; checkbox.className = "recipe-select"; checkbox.dataset.id = item.id; checkbox.checked = state.selectedRecipes.has(item.id); checkbox.setAttribute("aria-label", `Selecionar a receita ${item.name} para impressão`); selector.append(checkbox); const heading = el("div"); heading.append(el("span", "recipe-category", recipeCategoryLabels[item.category] || "Outros"), el("h2", "", item.name)); title.append(selector, heading); card.append(title);
