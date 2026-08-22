@@ -9,7 +9,7 @@
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/css/site.css?v=20260808-2">
 <link rel="stylesheet" href="/css/admin-overrides.css?v=20260809-1">
-<link rel="stylesheet" href="/css/internal.css?v=20260821-1">
+<link rel="stylesheet" href="/css/internal.css?v=20260822-2">
 </head>
 <body class="admin-v2-page internal-page">
 <a class="skip-link" href="#internal-content">Pular para o conteúdo</a>
@@ -97,14 +97,16 @@
       </section>
 
       <section class="admin-view" data-view="inventory" hidden>
-        <div class="view-heading"><div><p class="eyebrow">ESTOQUE</p><h1>Ingredientes e materiais.</h1><p>Veja o que está acabando e monte listas por fornecedor.</p></div><button class="button button-order" id="new-inventory-button" type="button">Novo item</button></div>
-        <div class="list-toolbar internal-toolbar"><input id="inventory-search" type="search" placeholder="Buscar item"><select id="inventory-supplier-filter"><option value="">Todos os fornecedores</option><option>CEASA</option><option>ASSAÍ</option><option>Atacadão</option><option>Villefort</option><option>Apoio Mineiro</option><option>Nova Safra</option><option>Não definido</option></select><label class="toolbar-check"><input id="inventory-low-filter" type="checkbox"> Somente acabando</label><button class="small-action" id="print-shopping-list" type="button">Imprimir lista</button></div>
+        <div class="view-heading"><div><p class="eyebrow">ESTOQUE</p><h1>Ingredientes e materiais.</h1><p>Filtre, marque os produtos desejados e imprima uma única lista de compras.</p></div><button class="button button-order" id="new-inventory-button" type="button">Novo item</button></div>
+        <div class="list-toolbar internal-toolbar"><input id="inventory-search" type="search" placeholder="Buscar item"><select id="inventory-category-filter" aria-label="Filtrar por categoria"><option value="">Todas as categorias</option></select><select id="inventory-supplier-filter"><option value="">Todos os fornecedores</option><option>CEASA</option><option>ASSAÍ</option><option>Atacadão</option><option>Villefort</option><option>Apoio Mineiro</option><option>Nova Safra</option><option>Não definido</option></select><label class="toolbar-check"><input id="inventory-low-filter" type="checkbox"> Somente acabando</label></div>
+        <div class="selection-toolbar" aria-live="polite"><p><strong id="inventory-selection-count">0 produtos selecionados</strong><span>A seleção é mantida mesmo ao trocar filtros.</span></p><div><button class="small-action" id="select-visible-inventory" type="button">Selecionar visíveis</button><button class="small-action" id="clear-inventory-selection" type="button">Limpar seleção</button><button class="button button-dark" id="print-shopping-list" type="button" disabled>Imprimir selecionados</button></div></div>
         <div class="admin-list inventory-list" id="inventory-list"></div>
       </section>
 
       <section class="admin-view" data-view="recipes" hidden>
-        <div class="view-heading"><div><p class="eyebrow">RECEITAS</p><h1>Caderno da Capannone.</h1><p>Cada alteração guarda automaticamente a versão anterior, com data.</p></div><button class="button button-order" id="new-recipe-button" type="button">Nova receita</button></div>
+        <div class="view-heading"><div><p class="eyebrow">RECEITAS</p><h1>Caderno da Capannone.</h1><p>Cada alteração guarda automaticamente a versão anterior, com data. Na impressão, até quatro recheios são reunidos por folha.</p></div><button class="button button-order" id="new-recipe-button" type="button">Nova receita</button></div>
         <div class="list-toolbar"><input id="recipe-search" type="search" placeholder="Buscar receita"><select id="recipe-category-filter"><option value="">Todas as categorias</option><option value="recheios">Recheios</option><option value="molhos">Molhos</option><option value="massas">Massas</option><option value="pizzas">Pizzas</option><option value="bebidas">Bebidas</option><option value="doces">Doces</option><option value="preparos">Preparos</option><option value="outros">Outros</option></select></div>
+        <div class="selection-toolbar" aria-live="polite"><p><strong id="recipe-selection-count">0 receitas selecionadas</strong><span>Os recheios serão agrupados em até 4 quadros por página A4.</span></p><div><button class="small-action" id="select-visible-recipes" type="button">Selecionar visíveis</button><button class="small-action" id="clear-recipe-selection" type="button">Limpar seleção</button><button class="button button-dark" id="print-selected-recipes" type="button" disabled>Imprimir selecionadas</button></div></div>
         <div class="recipe-grid" id="recipe-list"></div>
       </section>
 
@@ -149,7 +151,7 @@
 <dialog class="admin-dialog compact-dialog" id="inventory-dialog">
   <form method="dialog" class="dialog-close-row"><button aria-label="Fechar" value="cancel">✕</button></form>
   <form id="inventory-form"><input id="inventory-id" type="hidden"><p class="eyebrow">ESTOQUE</p><h2>Item de estoque</h2><div class="form-grid">
-    <div class="field full-field"><label for="inventory-name">Item</label><input id="inventory-name" maxlength="120" required></div><div class="field"><label for="inventory-category">Categoria</label><select id="inventory-category"><option>Frios</option><option>Insumos</option><option>Hortifruti</option><option>Bebidas</option><option>Cervejas</option><option>Destilados</option><option>Doces</option><option>Suprimentos</option><option>Outros</option></select></div><div class="field"><label for="inventory-supplier">Fornecedor</label><input id="inventory-supplier" list="supplier-options" maxlength="100" value="Não definido"><datalist id="supplier-options"><option value="CEASA"><option value="ASSAÍ"><option value="Atacadão"><option value="Villefort"><option value="Apoio Mineiro"><option value="Nova Safra"><option value="Não definido"></datalist></div>
+    <div class="field full-field"><label for="inventory-name">Item</label><input id="inventory-name" maxlength="120" required></div><div class="field"><label for="inventory-category">Categoria</label><select id="inventory-category" required></select></div><div class="field"><label for="inventory-supplier">Fornecedor</label><input id="inventory-supplier" list="supplier-options" maxlength="100" value="Não definido"><datalist id="supplier-options"><option value="CEASA"><option value="ASSAÍ"><option value="Atacadão"><option value="Villefort"><option value="Apoio Mineiro"><option value="Nova Safra"><option value="Não definido"></datalist></div>
     <div class="field"><label for="inventory-current">Quantidade atual</label><input id="inventory-current" type="number" min="0" step="0.01" required></div><div class="field"><label for="inventory-minimum">Avisar abaixo de</label><input id="inventory-minimum" type="number" min="0" step="0.01" required></div><div class="field"><label for="inventory-unit">Unidade</label><input id="inventory-unit" maxlength="30" placeholder="kg, un, caixa"></div><div class="field"><label for="inventory-buy-quantity">Quantidade para comprar</label><input id="inventory-buy-quantity" type="number" min="0" step="0.01"></div>
     <div class="field full-field"><label for="inventory-notes">Observações</label><textarea id="inventory-notes" maxlength="600"></textarea></div>
   </div><div class="dialog-actions"><button class="button" type="button" data-close-dialog="inventory-dialog">Cancelar</button><button class="button button-dark" type="submit">Salvar item</button></div><p class="form-message" id="inventory-message" role="status"></p></form>
@@ -165,6 +167,6 @@
 
 <section id="print-area" class="print-area" aria-hidden="true"></section>
 <noscript><p class="noscript">Ative o JavaScript para usar a gestão interna.</p></noscript>
-<script type="module" src="/js/magna.js?v=20260822-1"></script>
+<script type="module" src="/js/magna.js?v=20260822-2"></script>
 </body>
 </html>
