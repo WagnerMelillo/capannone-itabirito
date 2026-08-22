@@ -490,14 +490,32 @@ function appendRecipeDetails(container, item, compact = false) {
   if (item.notes) { container.append(el("h3", "print-section-title", "Observações"), el("p", `print-pre-line${compact ? " compact" : ""}`, item.notes)); }
 }
 
+function fillingNote(item) {
+  const recipeName = clean(item.name, 160).toLocaleLowerCase("pt-BR");
+  return [item.instructions, item.notes].filter(Boolean).flatMap((value) => clean(value, 10000).split(/\r?\n/)).map((line) => clean(line, 1000)).filter((line) => line && line.toLocaleLowerCase("pt-BR") !== recipeName).join("\n");
+}
+
+function fillingEstimatedHeight(item) {
+  const ingredientCount = clean(item.ingredients, 8000).split(/\r?\n/).map(ingredientParts).filter((part) => part.name).length; const note = fillingNote(item); const noteLines = note ? note.split(/\r?\n/).reduce((total, line) => total + Math.max(1, Math.ceil(line.length / 75)), 0) : 0;
+  return 17.5 + ingredientCount * 6.7 + noteLines * 6.7;
+}
+
+function buildFillingTable(item) {
+  const rows = clean(item.ingredients, 8000).split(/\r?\n/).map(ingredientParts).filter((part) => part.name); const table = el("table", "recipe-print-table compact filling-recipe-table"); const thead = el("thead"); const heading = el("tr");
+  ["Ingrediente", "Média", "Grande", "Gigante"].forEach((label) => heading.append(el("th", "", label))); thead.append(heading); table.append(thead); const tbody = el("tbody");
+  rows.forEach((part) => { const fallback = part.detail || "—"; const values = [part.name, part.hasSizes ? part.sizes.M || "—" : fallback, part.hasSizes ? part.sizes.G || "—" : fallback, part.hasSizes ? part.sizes.GG || "—" : fallback]; const row = el("tr"); values.forEach((value) => row.append(el("td", "", value))); tbody.append(row); });
+  const note = fillingNote(item); if (note) { const row = el("tr", "filling-note-row"); const cell = el("td", "", note); cell.colSpan = 4; row.append(cell); tbody.append(row); }
+  table.append(tbody); return table;
+}
+
 function buildRecipeSheet(item) {
   const sheet = el("article", "print-sheet print-recipe-page"); sheet.append(el("p", "print-kicker", `Receitas Capannone · ${recipeCategoryLabels[item.category] || "Outros"}`), el("h1", "", item.name)); if (item.yield) sheet.append(el("p", "print-meta", item.yield)); sheet.append(el("h2", "", "Ingredientes"), buildIngredientTable(item)); appendRecipeDetails(sheet, item); sheet.append(el("p", "print-footer", `Versão atualizada em ${dateLabel(item.updatedAt, true)} · Uso interno Capannone`)); return sheet;
 }
 
 function buildFillingPage(items) {
-  const sheet = el("article", "print-sheet filling-print-page"); sheet.append(el("p", "print-kicker", "Receitas Capannone · Quadro da cozinha"), el("h1", "", "Recheios")); const grid = el("div", "filling-print-grid"); grid.dataset.count = String(items.length);
-  items.forEach((item) => { const card = el("section", "filling-print-card"); card.append(el("h2", "", item.name)); if (item.yield) card.append(el("p", "print-meta", item.yield)); card.append(buildIngredientTable(item, true)); appendRecipeDetails(card, item, true); grid.append(card); });
-  sheet.append(grid, el("p", "print-footer", `Gerado em ${dateLabel(nowIso(), true)} · Uso interno Capannone`)); return sheet;
+  const sheet = el("article", "print-sheet filling-print-page"); const grid = el("div", "filling-print-grid");
+  items.forEach((item) => { const card = el("section", "filling-print-card"); card.append(el("h2", "", item.name), buildFillingTable(item)); grid.append(card); });
+  sheet.append(grid); return sheet;
 }
 
 function startPrint(nodes, mode = "") {
@@ -505,9 +523,9 @@ function startPrint(nodes, mode = "") {
 }
 
 function printRecipes(items) {
-  if (!items.length) return toast("Selecione pelo menos uma receita para imprimir.", "error"); const fillings = items.filter((item) => item.category === "recheios"); const others = items.filter((item) => item.category !== "recheios"); const sheets = []; const fillingPages = [];
-  fillings.forEach((item) => { const ingredientLines = clean(item.ingredients, 8000).split(/\r?\n/).filter(Boolean).length; const textLines = Math.ceil((clean(item.instructions, 10000).length + clean(item.notes, 3000).length) / 90); const weight = Math.max(8, ingredientLines + textLines + 5); const current = fillingPages.at(-1); const currentWeight = current?.reduce((total, entry) => total + entry.weight, 0) || 0; if (!current || current.length >= 4 || currentWeight + weight > 42) fillingPages.push([{ item, weight }]); else current.push({ item, weight }); });
-  fillingPages.forEach((page) => sheets.push(buildFillingPage(page.map((entry) => entry.item))));
+  if (!items.length) return toast("Selecione pelo menos uma receita para imprimir.", "error"); const fillings = items.filter((item) => item.category === "recheios"); const others = items.filter((item) => item.category !== "recheios"); const sheets = []; const fillingPages = []; let currentPage = []; let usedHeight = 0;
+  fillings.forEach((item) => { const height = fillingEstimatedHeight(item); const gap = currentPage.length ? 2 : 0; if (currentPage.length && usedHeight + gap + height > 280) { fillingPages.push(currentPage); currentPage = []; usedHeight = 0; } currentPage.push(item); usedHeight += (currentPage.length > 1 ? 2 : 0) + height; }); if (currentPage.length) fillingPages.push(currentPage);
+  fillingPages.forEach((page) => sheets.push(buildFillingPage(page)));
   others.forEach((item) => sheets.push(buildRecipeSheet(item))); startPrint(sheets, fillings.length ? "printing-recipes" : "");
 }
 
