@@ -4,6 +4,7 @@ Disallow: /admin
 Disallow: /marketing
 Disallow: /magna
 Disallow: /funcionarios
+Disallow: /super-administrador
 Disallow: /api/
 
 Sitemap: https://capannone.dasmmelhores.com/sitemap.xml

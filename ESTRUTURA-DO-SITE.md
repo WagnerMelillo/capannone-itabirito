@@ -25,10 +25,10 @@ O navegador público lê conteúdo liberado pelas regras do Firestore. As grava�
 
 ## 3. Acessos
 
-### Super-administrador
+### Super-administradora
 
-- O único perfil autorizado como `superadmin` pertence a Wagner Melillo (`wagnermelillo@gmail.com`).
-- Pode editar todo o conteúdo e gerenciar usuários.
+- O único perfil autorizado como `superadmin` pertence à Magna Melillo (`magnamelillo@gmail.com`).
+- Pode editar todo o conteúdo e gerenciar acessos de marketing e funcionários em `/super-administrador`.
 - Pode credenciar pessoas, remover ou restaurar acesso e exigir nova senha no próximo acesso.
 - As regras impedem a criação de um segundo super-administrador pelo painel.
 
@@ -49,7 +49,7 @@ O e-mail é somente o identificador de login. O painel não usa link de validaç
 - A proprietária pode cadastrar, desativar ou excluir funcionários; a senha provisória precisa ser trocada no primeiro acesso.
 - Funcionários acessam `/funcionarios`, onde consultam o calendário, conversam com a Magna e registram o ponto.
 - O ponto permanece bloqueado enquanto a origem pública da rede Capannone Hotspot não estiver configurada no Worker.
-- O Wagner pode abrir “Super-administrador” dentro da área Magna usando a sessão já autenticada; as permissões continuam verificadas pelo Firebase e pelas regras do banco.
+- A Magna abre “Super-administrador” pelo menu verde usando a sessão já autenticada, sem informar outra senha; as permissões continuam verificadas pelo Firebase e pelas regras do banco.
 
 O antigo acesso por credencial compartilhada foi aposentado. A senha Firebase de um usuário não depende de nenhum segredo do Worker.
 
@@ -79,11 +79,13 @@ index.html                    página pública
 marketing.html                gestão de conteúdo e campanhas
 admin.html                    redirecionamento legado para /marketing
 magna.html                    plataforma interna da proprietária
+super-administrador.html      gestão exclusiva de todos os acessos
 funcionarios/index.html       área individual dos funcionários
 espaco-fotos.html             galeria pública
 js/site.js                    leitura e renderização do conteúdo público
 js/admin.js                   autenticação, permissões e operações do painel
 js/magna.js                   operação interna da proprietária
+js/superadmin.js              credenciamento e bloqueio de marketing e funcionários
 js/funcionarios.js            calendário, chat e ponto da equipe
 css/internal.css              interface responsiva e impressão A4 interna
 js/default-content.js         baseline local e constantes compartilhadas
@@ -149,12 +151,13 @@ O site não oferece portal de autenticação de Wi-Fi. A disponibilidade da rede
 
 - Marketing: `https://capannone.dasmmelhores.com/marketing`.
 - Proprietária: `https://capannone.dasmmelhores.com/magna`.
+- Super-administradora: `https://capannone.dasmmelhores.com/super-administrador` (reutiliza a sessão da Magna).
 - Funcionários: `https://capannone.dasmmelhores.com/funcionarios`.
 - O endereço antigo `/admin` redireciona permanentemente para `/marketing`.
 - Use “Conteúdo do site” para textos, contatos, links e imagens institucionais.
 - Use “Cardápio e preços” para criar, editar, ocultar ou excluir itens.
 - Use “Campanhas” para rascunhar, agendar, ativar ou encerrar ações.
 - Use “Fotos do espaço” para alimentar a galeria pública.
-- “Usuários e acessos” aparece somente para o super-administrador.
+- “Super-administrador” aparece no menu verde da Magna e abre a página separada que controla acessos de marketing e funcionários.
 
 Senhas provisórias devem ser entregues por canal seguro e nunca registradas no Git, em documentos públicos ou em código.

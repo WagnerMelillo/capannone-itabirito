@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="description" content="Gestão protegida dos acessos de marketing e funcionários da Capannone.">
+<title>Super-administrador | Capannone</title>
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/css/site.css?v=20260808-2">
+<link rel="stylesheet" href="/css/admin-overrides.css?v=20260822-1">
+<link rel="stylesheet" href="/css/internal.css?v=20260821-1">
+</head>
+<body class="admin-v2-page internal-page">
+<a class="skip-link" href="#superadmin-content">Pular para o conteúdo</a>
+<header class="admin-topbar">
+  <a class="admin-brand" href="/" aria-label="Voltar ao site da Capannone"><img src="/assets/brand/logo.webp" alt="Capannone Casa das Massas" width="648" height="220"></a>
+  <div class="admin-topbar-actions"><span class="admin-user-summary" id="user-summary" hidden></span><button class="admin-link admin-link-button" id="logout-button" type="button" hidden>Sair</button></div>
+</header>
+
+<main id="superadmin-content">
+  <section class="auth-shell" id="access-loading">
+    <div class="auth-card"><p class="eyebrow">ACESSO PROTEGIDO</p><h1>Abrindo seus controles.</h1><p>Estamos confirmando a sessão da Magna. Nenhuma nova senha será solicitada.</p></div>
+  </section>
+
+  <div class="admin-app" id="superadmin-app" hidden>
+    <aside class="admin-sidebar internal-sidebar" aria-label="Super-administrador">
+      <a class="admin-nav-item internal-nav-link active" href="/super-administrador" aria-current="page">Todos os acessos</a>
+      <div class="internal-nav-separator" aria-hidden="true"></div>
+      <a class="admin-nav-item internal-nav-link" href="/magna">Voltar para Magna</a>
+      <a class="admin-nav-item internal-nav-link" href="/marketing">Abrir Marketing</a>
+    </aside>
+
+    <div class="admin-workspace">
+      <div class="admin-toast" id="superadmin-toast" role="status" aria-live="polite" hidden></div>
+      <section class="admin-view">
+        <div class="view-heading"><div><p class="eyebrow">SUPER-ADMINISTRADORA</p><h1>Todos os acessos da Capannone.</h1><p>Controle separadamente a equipe de marketing e os funcionários.</p></div><button class="button button-dark" id="refresh-users" type="button">Atualizar acessos</button></div>
+        <div class="security-note">Esta página pertence somente à Magna. Remover um acesso interrompe imediatamente as permissões, sem apagar o histórico. Uma senha provisória sempre precisa ser trocada no primeiro acesso.</div>
+        <div class="internal-dashboard-grid access-management-grid">
+          <section class="admin-panel-card"><div class="view-heading compact-heading"><div><p class="eyebrow">MARKETING</p><h2>Equipe de marketing</h2><p id="marketing-user-count">Carregando acessos…</p></div><button class="button button-order" id="new-user-button" type="button">Credenciar pessoa</button></div><div class="admin-list" id="marketing-user-list"></div></section>
+          <section class="admin-panel-card"><div class="view-heading compact-heading"><div><p class="eyebrow">FUNCIONÁRIOS</p><h2>Equipe da pizzaria</h2><p id="employee-user-count">Carregando acessos…</p></div><a class="button button-order" href="/magna?view=people">Cadastrar funcionário</a></div><div class="admin-list" id="employee-user-list"></div></section>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<dialog class="admin-dialog compact-dialog" id="user-dialog">
+  <form method="dialog" class="dialog-close-row"><button aria-label="Fechar" value="cancel">✕</button></form>
+  <form id="user-form">
+    <p class="eyebrow">NOVO ACESSO DE MARKETING</p><h2>Credenciar pessoa</h2>
+    <div class="field"><label for="user-name">Nome</label><input id="user-name" maxlength="100" required></div>
+    <div class="field"><label for="user-email">E-mail</label><input id="user-email" type="email" autocomplete="off" required></div>
+    <div class="field"><label for="user-temp-password">Senha provisória</label><input id="user-temp-password" type="password" autocomplete="new-password" minlength="10" required><small>Use pelo menos 10 caracteres com letras e números. Mantenha o olho pressionado para conferir.</small></div>
+    <div class="dialog-actions"><button class="button" id="cancel-user" type="button">Cancelar</button><button class="button button-dark" type="submit">Criar acesso</button></div>
+    <p class="form-message" id="user-message" role="status" aria-live="polite"></p>
+  </form>
+</dialog>
+
+<noscript><p class="noscript">Ative o JavaScript para usar esta área protegida.</p></noscript>
+<script type="module" src="/js/superadmin.js?v=20260822-1"></script>
+</body>
+</html>

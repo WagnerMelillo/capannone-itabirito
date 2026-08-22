@@ -28,7 +28,7 @@ import {
 import { firebaseConfig } from "./firebase-config.js";
 import { MEDIA_API } from "./default-content.js";
 
-const SUPERADMIN_UID = "n7YwMAtBWrZmQUkTwfDQr5mnQsB2";
+const SUPERADMIN_UID = "unHjEmB7jXPGTXhvc2mFB9Iht3h1";
 const MAGNA_EMAIL = "magnamelillo@gmail.com";
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -56,7 +56,7 @@ const clean = (value, max = 1000) => String(value ?? "").trim().slice(0, max);
 const num = (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback;
 const nowIso = () => new Date().toISOString();
 const isSuperadmin = () => Boolean(auth.currentUser?.uid === SUPERADMIN_UID && state.profile?.role === "superadmin" && state.profile?.active);
-const isMagna = () => Boolean(state.profile?.role === "admin" && clean(state.profile?.email).toLowerCase() === MAGNA_EMAIL && state.profile?.active);
+const isMagna = () => Boolean(["admin", "superadmin"].includes(state.profile?.role) && clean(state.profile?.email).toLowerCase() === MAGNA_EMAIL && state.profile?.active);
 const isInternalManager = () => Boolean((isMagna() || isSuperadmin()) && state.profile?.mustChangePassword === false);
 
 function el(tag, className = "", text = "") {

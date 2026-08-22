@@ -3,7 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function ownerUid() {
-      return 'n7YwMAtBWrZmQUkTwfDQr5mnQsB2';
+      return 'unHjEmB7jXPGTXhvc2mFB9Iht3h1';
     }
 
     function magnaEmail() {
@@ -40,7 +40,7 @@ service cloud.firestore {
 
     function isMagna() {
       return isActiveProfile()
-        && currentProfile().role == 'admin'
+        && currentProfile().role in ['admin', 'superadmin']
         && currentProfile().email == magnaEmail();
     }
 
