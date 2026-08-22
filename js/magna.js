@@ -46,6 +46,8 @@ const state = {
   shifts: [],
   messages: [],
   timeEntries: [],
+  deviceRegistrations: new Map(),
+  recipeEditorMode: "recheios",
   selectedInventory: new Set(),
   selectedRecipes: new Set(),
   activeView: "dashboard",
@@ -194,7 +196,7 @@ async function loadAllData() {
   state.messages = messages;
   fillEmployeeOptions(); fillInventoryCategoryOptions();
   renderDashboard(); renderEmployees(); renderPayments(); renderInventory(); renderRecipes(); renderShifts(); renderMessages();
-  await loadTimeEntries();
+  await loadHotspotData();
 }
 
 function renderDashboard() {
@@ -234,8 +236,11 @@ function renderEmployees() {
     meta.append(pay, status, receive, access); card.append(meta);
     const vacation = item.vacationStart || item.vacationEnd ? `Férias: ${dateLabel(item.vacationStart)} a ${dateLabel(item.vacationEnd)}` : "Férias ainda não programadas";
     card.append(el("p", "employee-vacation", vacation));
+    const device = state.deviceRegistrations.get(item.id);
+    card.append(el("p", `employee-device${device ? " registered" : ""}`, device ? `Aparelho cadastrado · ${dateLabel(device.enrolledAt, true)}` : "Aparelho ainda não cadastrado"));
     const actions = el("div", "employee-card-actions");
     actions.append(button("Editar", "edit-employee", item.id));
+    if (isMagna() && device) actions.append(button("Trocar aparelho", "reset-device", item.id, "small-action"));
     if (isMagna()) actions.append(button(item.active === false ? "Restaurar acesso" : "Remover acesso", "toggle-employee", item.id, `small-action${item.active === false ? "" : " danger"}`));
     card.append(actions);
     return card;
@@ -347,15 +352,22 @@ function renderShifts() {
   }));
 }
 
-async function loadTimeEntries() {
+async function managerApi(path, options = {}) {
+  const token = await auth.currentUser.getIdToken();
+  return fetch(`${MEDIA_API}${path}`, { ...options, headers: { Authorization: `Bearer ${token}`, ...(options.headers || {}) }, cache: "no-store", credentials: "omit" });
+}
+
+async function loadHotspotData() {
   if (!auth.currentUser || !isInternalManager()) return;
   try {
-    const token = await auth.currentUser.getIdToken();
-    const response = await fetch(`${MEDIA_API}/hotspot/entries`, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store", credentials: "omit" });
-    if (!response.ok) throw new Error("Integração do Hotspot ainda não configurada.");
-    const data = await response.json(); state.timeEntries = Array.isArray(data.items) ? data.items : []; $("#hotspot-summary").textContent = data.configured ? "Registros confirmados pela rede Capannone Hotspot." : "O relógio de ponto será liberado após configurar a rede Capannone Hotspot.";
-  } catch (error) { state.timeEntries = []; $("#hotspot-summary").textContent = friendlyError(error); }
-  renderTimeEntries();
+    const [entryResponse, deviceResponse] = await Promise.all([managerApi("/hotspot/entries"), managerApi("/hotspot/devices")]);
+    if (!entryResponse.ok || !deviceResponse.ok) throw new Error("Integração do Hotspot ainda não configurada.");
+    const [entryData, deviceData] = await Promise.all([entryResponse.json(), deviceResponse.json()]);
+    state.timeEntries = Array.isArray(entryData.items) ? entryData.items : [];
+    state.deviceRegistrations = new Map((Array.isArray(deviceData.items) ? deviceData.items : []).map((item) => [item.uid, item]));
+    $("#hotspot-summary").textContent = entryData.configured ? "Registros confirmados pela rede Capannone e pelo aparelho cadastrado." : "O relógio de ponto será liberado após configurar a origem pública da rede Capannone.";
+  } catch (error) { state.timeEntries = []; state.deviceRegistrations = new Map(); $("#hotspot-summary").textContent = friendlyError(error); }
+  renderTimeEntries(); renderEmployees();
 }
 
 function renderTimeEntries() {
@@ -373,7 +385,7 @@ function renderMessages() {
 
 function openEmployee(item = null) {
   $("#employee-form").reset(); setMessage("#employee-message"); $("#employee-id").value = item?.id || ""; $("#employee-dialog-title").textContent = item ? "Editar funcionário" : "Cadastrar funcionário";
-  $$(".new-employee-only").forEach((node) => { node.hidden = Boolean(item); }); $("#employee-email").required = !item; $("#employee-pin").required = !item;
+  $$(".new-employee-only").forEach((node) => { node.hidden = Boolean(item); }); $("#employee-email").required = !item;
   if (item) { $("#employee-name").value = item.displayName || ""; $("#employee-role").value = item.jobTitle || ""; $("#employee-pay-amount").value = item.payAmount || ""; $("#employee-pay-frequency").value = item.payFrequency || "monthly"; $("#employee-pay-day").value = item.payDay || ""; $("#employee-payment-status").value = item.paymentStatus || "pending"; $("#employee-vacation-start").value = item.vacationStart || ""; $("#employee-vacation-end").value = item.vacationEnd || ""; $("#employee-notes").value = item.notes || ""; }
   $("#employee-dialog").showModal();
 }
@@ -390,15 +402,41 @@ function openInventory(item = null) {
   $("#inventory-dialog").showModal();
 }
 
-function openRecipe(item = null) {
-  $("#recipe-form").reset(); setMessage("#recipe-message"); $("#recipe-id").value = item?.id || "";
-  if (item) { $("#recipe-name").value = item.name || ""; $("#recipe-category").value = item.category || "outros"; $("#recipe-yield").value = item.yield || ""; $("#recipe-ingredients").value = item.ingredients || ""; $("#recipe-instructions").value = item.instructions || ""; $("#recipe-notes").value = item.notes || ""; }
-  $("#recipe-dialog").showModal();
+function recipeInput(value, column, label, size = false) { const input = el("input", `recipe-grid-input${size ? " size" : ""}`); input.type = "text"; input.value = value || ""; input.dataset.column = column; input.maxLength = column === "name" ? 300 : 200; input.setAttribute("aria-label", label); return input; }
+
+function recipeRowsFromText(value) {
+  return clean(value, 8000).split(/\r?\n/).map(ingredientParts).filter((part) => part.name).map((part) => ({ name: part.name, detail: part.detail, M: part.sizes.M, G: part.sizes.G, GG: part.sizes.GG }));
 }
 
-async function hashPin(uid, pin) {
-  const data = new TextEncoder().encode(`${uid}:${pin}`); const digest = await crypto.subtle.digest("SHA-256", data);
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+function readRecipeEditorRows() {
+  return $$("#recipe-editor-body tr").map((row) => ({ name: clean($("[data-column=name]", row)?.value, 300), detail: clean($("[data-column=detail]", row)?.value, 700), M: clean($("[data-column=M]", row)?.value, 200), G: clean($("[data-column=G]", row)?.value, 200), GG: clean($("[data-column=GG]", row)?.value, 200) })).filter((row) => row.name || row.detail || row.M || row.G || row.GG);
+}
+
+function updateRecipeRowNumbers() { $$("#recipe-editor-body tr").forEach((row, index) => { const number = $(".recipe-row-number", row); if (number) number.textContent = String(index + 1); }); }
+
+function addRecipeEditorRow(record = {}, focus = false) {
+  const sizes = state.recipeEditorMode === "recheios"; const row = el("tr"); row.append(el("td", "recipe-row-number", String($$("#recipe-editor-body tr").length + 1)));
+  const nameCell = el("td"); const nameInput = recipeInput(record.name, "name", "Ingrediente"); nameCell.append(nameInput); row.append(nameCell);
+  if (sizes) ["M", "G", "GG"].forEach((column) => { const cell = el("td"); const fallback = column === "M" && !record.M && !record.G && !record.GG ? record.detail : ""; cell.append(recipeInput(record[column] || fallback, column, `Quantidade ${column}`, true)); row.append(cell); });
+  else { const cell = el("td"); cell.append(recipeInput(record.detail, "detail", "Quantidade ou observação")); row.append(cell); }
+  const actionCell = el("td"); const remove = el("button", "recipe-remove-row", "×"); remove.type = "button"; remove.dataset.action = "remove-recipe-row"; remove.setAttribute("aria-label", "Excluir esta linha"); actionCell.append(remove); row.append(actionCell); $("#recipe-editor-body").append(row); if (focus) nameInput.focus();
+}
+
+function renderRecipeEditor(rows = []) {
+  const sizes = state.recipeEditorMode === "recheios"; const heading = el("tr"); ["#", "Ingrediente", ...(sizes ? ["Média", "Grande", "Gigante"] : ["Quantidade / observação"]), ""].forEach((label, index) => { const cell = el("th", sizes && index >= 2 && index <= 4 ? "recipe-size-column" : "", label); heading.append(cell); }); $("#recipe-editor-head").replaceChildren(heading); $("#recipe-editor-body").replaceChildren(); (rows.length ? rows : [{}]).forEach((row) => addRecipeEditorRow(row)); $("#recipe-sheet-help").textContent = sizes ? "Use uma linha por ingrediente e preencha as quantidades para Média, Grande e Gigante." : "Use uma linha por ingrediente e informe a quantidade ou observação ao lado.";
+}
+
+function serializeRecipeEditor() {
+  const rows = readRecipeEditorRows().filter((row) => row.name); const sizes = state.recipeEditorMode === "recheios";
+  return rows.map((row) => { if (!sizes) return row.detail ? `${row.name} — ${row.detail}` : row.name; const values = [["M", row.M], ["G", row.G], ["GG", row.GG]].filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`); return values.length ? `${row.name} — ${values.join(" | ")}` : row.name; }).join("\n");
+}
+
+function changeRecipeEditorMode() { const previous = readRecipeEditorRows(); const nextMode = $("#recipe-category").value; if (state.recipeEditorMode === "recheios" && nextMode !== "recheios") previous.forEach((row) => { row.detail = [["M", row.M], ["G", row.G], ["GG", row.GG]].filter(([, value]) => value).map(([label, value]) => `${label}: ${value}`).join(" | ") || row.detail; }); if (state.recipeEditorMode !== "recheios" && nextMode === "recheios") previous.forEach((row) => { const parsed = ingredientParts(`${row.name}${row.detail ? ` — ${row.detail}` : ""}`); row.M = parsed.sizes.M || (!parsed.hasSizes ? row.detail : ""); row.G = parsed.sizes.G; row.GG = parsed.sizes.GG; }); state.recipeEditorMode = nextMode; renderRecipeEditor(previous); }
+
+function openRecipe(item = null) {
+  $("#recipe-form").reset(); setMessage("#recipe-message"); $("#recipe-id").value = item?.id || ""; $("#recipe-category").value = item?.category || "recheios"; state.recipeEditorMode = $("#recipe-category").value;
+  if (item) { $("#recipe-name").value = item.name || ""; $("#recipe-yield").value = item.yield || ""; $("#recipe-instructions").value = item.instructions || ""; $("#recipe-notes").value = item.notes || ""; }
+  renderRecipeEditor(recipeRowsFromText(item?.ingredients || "")); $("#recipe-dialog").showModal();
 }
 
 async function handleEmployeeSave(event) {
@@ -408,17 +446,17 @@ async function handleEmployeeSave(event) {
     if (id) { await updateDoc(doc(db, "employees", id), record); const item = state.employees.find((candidate) => candidate.id === id); Object.assign(item, record); }
     else {
       if (!isMagna()) throw new Error("Somente Magna pode cadastrar funcionários.");
-      const email = clean($("#employee-email").value, 200).toLowerCase(); const pin = $("#employee-pin").value; const provisionalPassword = $("#employee-temp-password").value;
+      const email = clean($("#employee-email").value, 200).toLowerCase(); const provisionalPassword = $("#employee-temp-password").value;
       const credential = await createUserWithEmailAndPassword(employeeAuth, email, provisionalPassword);
       try {
-        const createdAt = nowIso(); const pinHash = await hashPin(credential.user.uid, pin); const batch = writeBatch(db);
+        const createdAt = nowIso(); const batch = writeBatch(db);
         batch.set(doc(db, "users", credential.user.uid), { displayName: record.displayName, email, role: "employee", active: true, mustChangePassword: true, createdAt, createdBy: auth.currentUser.uid, updatedAt: createdAt, updatedBy: auth.currentUser.uid });
-        batch.set(doc(db, "employees", credential.user.uid), { ...record, email, active: true, phonePinHash: pinHash, createdAt, createdBy: auth.currentUser.uid }); await batch.commit();
-        state.employees.push({ id: credential.user.uid, ...record, email, active: true, phonePinHash: pinHash, createdAt }); state.employees.sort((a, b) => clean(a.displayName).localeCompare(clean(b.displayName), "pt-BR"));
+        batch.set(doc(db, "employees", credential.user.uid), { ...record, email, active: true, createdAt, createdBy: auth.currentUser.uid }); await batch.commit();
+        state.employees.push({ id: credential.user.uid, ...record, email, active: true, createdAt }); state.employees.sort((a, b) => clean(a.displayName).localeCompare(clean(b.displayName), "pt-BR"));
       } catch (error) { await deleteUser(credential.user).catch(() => {}); throw error; }
       finally { await signOut(employeeAuth).catch(() => {}); }
     }
-    $("#employee-dialog").close(); renderEmployees(); renderDashboard(); fillEmployeeOptions(); toast(id ? "Funcionário atualizado." : "Acesso criado. Entregue a senha provisória e o PIN separadamente.");
+    $("#employee-dialog").close(); renderEmployees(); renderDashboard(); fillEmployeeOptions(); toast(id ? "Funcionário atualizado." : "Acesso criado. Entregue somente a senha provisória.");
   } catch (error) { setMessage("#employee-message", friendlyError(error), "error"); }
   finally { submit.disabled = false; }
 }
@@ -426,6 +464,10 @@ async function handleEmployeeSave(event) {
 async function handleEmployeeAction(control) {
   const item = state.employees.find((candidate) => candidate.id === control.dataset.id); if (!item) return;
   if (control.dataset.action === "edit-employee") return openEmployee(item);
+  if (control.dataset.action === "reset-device") {
+    if (!isMagna() || !confirm(`Liberar o cadastro de um novo celular para ${item.displayName}? O aparelho atual deixará de registrar ponto.`)) return;
+    const response = await managerApi("/hotspot/device/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ uid: item.id }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Não foi possível liberar a troca."); state.deviceRegistrations.delete(item.id); renderEmployees(); return toast("Troca liberada. O próximo celular usado na rede Capannone será cadastrado.");
+  }
   if (control.dataset.action === "toggle-employee") {
     if (!isMagna()) return toast("Somente Magna pode remover ou restaurar acessos.", "error");
     const active = item.active === false; const question = active ? `Restaurar o acesso de ${item.displayName}?` : `Remover o acesso de ${item.displayName}?`;
@@ -462,8 +504,8 @@ async function handleInventoryAction(control) {
 }
 
 async function handleRecipeSave(event) {
-  event.preventDefault(); const id = $("#recipe-id").value; const submit = event.submitter; submit.disabled = true;
-  const record = { name: clean($("#recipe-name").value, 140), category: $("#recipe-category").value, yield: clean($("#recipe-yield").value, 200), ingredients: clean($("#recipe-ingredients").value, 8000), instructions: clean($("#recipe-instructions").value, 10000), notes: clean($("#recipe-notes").value, 3000), active: true, updatedAt: nowIso(), updatedBy: auth.currentUser.uid };
+  event.preventDefault(); const id = $("#recipe-id").value; const submit = event.submitter; const ingredients = clean(serializeRecipeEditor(), 8000); if (!ingredients) return setMessage("#recipe-message", "Inclua pelo menos um ingrediente na planilha.", "error"); $("#recipe-ingredients").value = ingredients; submit.disabled = true;
+  const record = { name: clean($("#recipe-name").value, 140), category: $("#recipe-category").value, yield: clean($("#recipe-yield").value, 200), ingredients, instructions: clean($("#recipe-instructions").value, 10000), notes: clean($("#recipe-notes").value, 3000), active: true, updatedAt: nowIso(), updatedBy: auth.currentUser.uid };
   try {
     if (id) { const current = state.recipes.find((item) => item.id === id); const versionRef = doc(collection(db, "recipeVersions")); const version = { recipeId: id, snapshot: { name: current.name || "", category: current.category || "outros", yield: current.yield || "", ingredients: current.ingredients || "", instructions: current.instructions || "", notes: current.notes || "" }, versionedAt: nowIso(), versionedBy: auth.currentUser.uid, versionedByName: state.profile.displayName || auth.currentUser.email }; const batch = writeBatch(db); batch.set(versionRef, version); batch.update(doc(db, "recipes", id), record); await batch.commit(); state.versions.unshift({ id: versionRef.id, ...version }); Object.assign(current, record); }
     else { const created = await addDoc(collection(db, "recipes"), { ...record, createdAt: nowIso(), createdBy: auth.currentUser.uid }); state.recipes.push({ id: created.id, ...record }); }
@@ -579,8 +621,10 @@ function wireUi() {
   $("#login-form").addEventListener("submit", async (event) => { event.preventDefault(); const submit = event.submitter; submit.disabled = true; setMessage("#login-message", "Entrando…"); try { await signInWithEmailAndPassword(auth, clean($("#login-email").value, 200).toLowerCase(), $("#login-password").value); event.target.reset(); } catch (error) { setMessage("#login-message", friendlyError(error), "error"); } finally { submit.disabled = false; } });
   $("#password-form").addEventListener("submit", async (event) => { event.preventDefault(); const password = $("#new-password").value; if (password !== $("#confirm-password").value) return setMessage("#password-message", "As senhas não coincidem.", "error"); if (!/[A-Za-zÀ-ÿ]/.test(password) || !/\d/.test(password)) return setMessage("#password-message", "Use letras e números na nova senha.", "error"); const submit = event.submitter; submit.disabled = true; try { await updatePassword(auth.currentUser, password); await updateDoc(doc(db, "users", auth.currentUser.uid), { mustChangePassword: false, passwordChangedAt: nowIso(), updatedAt: nowIso() }); state.profile.mustChangePassword = false; event.target.reset(); showAuthView("app"); await loadAllData(); switchView("dashboard"); } catch (error) { setMessage("#password-message", friendlyError(error), "error"); } finally { submit.disabled = false; } });
   $("#logout-button").addEventListener("click", () => signOut(auth)); $("#refresh-dashboard").addEventListener("click", async () => { await loadAllData(); toast("Dados atualizados."); });
+  $("#authorize-hotspot-network").addEventListener("click", async (event) => { if (!isMagna() || !confirm("Você está conectada ao Wi‑Fi da Capannone? Esta conexão passará a liberar o relógio de ponto.")) return; const control = event.currentTarget; control.disabled = true; try { const response = await managerApi("/hotspot/network/authorize", { method: "POST" }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Não foi possível reconhecer esta rede."); $("#hotspot-summary").textContent = "Rede Capannone reconhecida. O ponto será liberado automaticamente neste local."; toast("Rede Capannone reconhecida com segurança."); } catch (error) { toast(friendlyError(error), "error"); } finally { control.disabled = false; } });
   $$('[data-internal-view], [data-go-view]').forEach((control) => control.addEventListener("click", () => switchView(control.dataset.internalView || control.dataset.goView)));
   $("#new-employee-button").addEventListener("click", () => openEmployee()); $("#new-payment-button").addEventListener("click", () => openPayment()); $("#new-inventory-button").addEventListener("click", () => openInventory()); $("#new-recipe-button").addEventListener("click", () => openRecipe());
+  $("#add-recipe-row").addEventListener("click", () => addRecipeEditorRow({}, true)); $("#recipe-category").addEventListener("change", changeRecipeEditorMode); $("#recipe-editor-body").addEventListener("click", (event) => { const control = event.target.closest('[data-action="remove-recipe-row"]'); if (!control) return; const rows = $$("#recipe-editor-body tr"); if (rows.length === 1) return renderRecipeEditor([]); control.closest("tr").remove(); updateRecipeRowNumbers(); });
   $("#employee-form").addEventListener("submit", handleEmployeeSave); $("#payment-form").addEventListener("submit", handlePaymentSave); $("#inventory-form").addEventListener("submit", handleInventorySave); $("#recipe-form").addEventListener("submit", handleRecipeSave); $("#shift-form").addEventListener("submit", handleShiftSave); $("#chat-form").addEventListener("submit", handleChatSave);
   $("#employee-list").addEventListener("click", (event) => { const control = event.target.closest("button[data-action]"); if (control) handleEmployeeAction(control).catch((error) => toast(friendlyError(error), "error")); }); $("#payment-list").addEventListener("click", (event) => { const control = event.target.closest("button[data-action]"); if (control) handlePaymentAction(control).catch((error) => toast(friendlyError(error), "error")); }); $("#inventory-list").addEventListener("click", (event) => { const control = event.target.closest("button[data-action]"); if (control) handleInventoryAction(control).catch((error) => toast(friendlyError(error), "error")); }); $("#recipe-list").addEventListener("click", (event) => { const control = event.target.closest("button[data-action]"); if (control) handleRecipeAction(control).catch((error) => toast(friendlyError(error), "error")); }); $("#shift-list").addEventListener("click", (event) => { const control = event.target.closest("button[data-action]"); if (control) handleShiftAction(control).catch((error) => toast(friendlyError(error), "error")); });
   $("#inventory-list").addEventListener("change", (event) => { const checkbox = event.target.closest(".inventory-select"); if (!checkbox) return; if (checkbox.checked) state.selectedInventory.add(checkbox.dataset.id); else state.selectedInventory.delete(checkbox.dataset.id); updateInventorySelectionSummary(); });

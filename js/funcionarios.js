@@ -9,7 +9,9 @@ const MAGNA_EMAIL = "magnamelillo@gmail.com";
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const state = { profile: null, employee: null, shifts: [], messages: [], timeEntries: [], hotspotVerified: false, hotspotConfigured: false, calendarDate: new Date(), activeView: "home", toastTimer: null };
+const state = { profile: null, employee: null, shifts: [], messages: [], timeEntries: [], hotspotVerified: false, hotspotConfigured: false, deviceReady: false, deviceSetupPromise: null, calendarDate: new Date(), activeView: "home", toastTimer: null };
+const DEVICE_DB = "capannone-clock-device";
+const DEVICE_STORE = "employee-keys";
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 const clean = (value, max = 1000) => String(value ?? "").trim().slice(0, max);
@@ -33,7 +35,7 @@ async function loadData() {
   state.employee = { id: employeeDoc.id, ...employeeDoc.data() };
   state.shifts = shiftDocs.docs.map((item) => ({ id: item.id, ...item.data() })).sort((a, b) => clean(a.date).localeCompare(clean(b.date)) || clean(a.startTime).localeCompare(clean(b.startTime)));
   state.messages = messageDocs.docs.map((item) => ({ id: item.id, ...item.data() }));
-  await loadTimeEntries(); renderHome(); renderCalendar(); renderMessages();
+  await loadTimeEntries(); renderHome(); renderCalendar(); renderMessages(); await prepareDeviceBinding();
 }
 
 function renderHome() {
@@ -64,11 +66,54 @@ async function authenticatedFetch(path, options = {}) {
   const token = await auth.currentUser.getIdToken(); return fetch(`${MEDIA_API}${path}`, { ...options, headers: { Authorization: `Bearer ${token}`, ...(options.headers || {}) }, cache: "no-store", credentials: "omit" });
 }
 
-async function checkHotspot() {
-  const status = $("#network-status"); status.dataset.state = "checking"; status.querySelector("strong").textContent = "Verificando a rede…"; $("#clock-button").disabled = true;
-  try { const response = await authenticatedFetch("/hotspot/status"); const data = await response.json(); state.hotspotConfigured = Boolean(data.configured); state.hotspotVerified = Boolean(data.verified); if (state.hotspotVerified) { status.dataset.state = "ok"; status.querySelector("strong").textContent = "Conectado à rede Capannone Hotspot"; $("#clock-button").disabled = false; } else { status.dataset.state = "blocked"; status.querySelector("strong").textContent = state.hotspotConfigured ? "Conecte-se à rede Capannone Hotspot" : "Relógio aguardando configuração do Hotspot"; } }
-  catch (_) { state.hotspotVerified = false; status.dataset.state = "blocked"; status.querySelector("strong").textContent = "Não foi possível confirmar a rede Capannone"; }
+function openDeviceDatabase() {
+  return new Promise((resolve, reject) => { const request = indexedDB.open(DEVICE_DB, 1); request.onupgradeneeded = () => { if (!request.result.objectStoreNames.contains(DEVICE_STORE)) request.result.createObjectStore(DEVICE_STORE, { keyPath: "uid" }); }; request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error || new Error("Não foi possível guardar a identificação deste aparelho.")); });
 }
+
+async function storedDevice(uid) {
+  const database = await openDeviceDatabase();
+  return new Promise((resolve, reject) => { const transaction = database.transaction(DEVICE_STORE, "readonly"); const request = transaction.objectStore(DEVICE_STORE).get(uid); request.onsuccess = () => resolve(request.result || null); request.onerror = () => reject(request.error); transaction.oncomplete = () => database.close(); });
+}
+
+async function saveDevice(record) {
+  const database = await openDeviceDatabase();
+  return new Promise((resolve, reject) => { const transaction = database.transaction(DEVICE_STORE, "readwrite"); transaction.objectStore(DEVICE_STORE).put(record); transaction.oncomplete = () => { database.close(); resolve(); }; transaction.onerror = () => { database.close(); reject(transaction.error); }; });
+}
+
+function base64Url(value) { let binary = ""; new Uint8Array(value).forEach((byte) => { binary += String.fromCharCode(byte); }); return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, ""); }
+
+async function createDeviceKeys() {
+  const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]); const publicKey = await crypto.subtle.exportKey("jwk", pair.publicKey); const privateJwk = await crypto.subtle.exportKey("jwk", pair.privateKey); const privateKey = await crypto.subtle.importKey("jwk", privateJwk, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]); privateJwk.d = ""; return { publicKey, privateKey };
+}
+
+async function signedChallenge(action, privateKey) {
+  const response = await authenticatedFetch("/hotspot/device/challenge", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Não foi possível confirmar a segurança do aparelho."); const signature = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, privateKey, new TextEncoder().encode(data.challenge)); return { challengeId: data.challengeId, signature: base64Url(signature) };
+}
+
+function showNetwork(stateName, text) { const target = $("#network-status"); target.dataset.state = stateName; target.querySelector("strong").textContent = text; }
+function showDevice(stateName, title, detail) { const target = $("#device-status"); target.dataset.state = stateName; target.querySelector("strong").textContent = title; target.querySelector("small").textContent = detail; }
+
+async function enrollCurrentDevice() {
+  const keys = await createDeviceKeys(); const proof = await signedChallenge("enroll", keys.privateKey); const response = await authenticatedFetch("/hotspot/device/enroll", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ publicKey: keys.publicKey, ...proof }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Não foi possível cadastrar este aparelho."); await saveDevice({ uid: auth.currentUser.uid, deviceId: data.device.deviceId, privateKey: keys.privateKey, publicKey: keys.publicKey, enrolledAt: data.device.enrolledAt }); return data.device;
+}
+
+async function runDeviceBinding() {
+  state.deviceReady = false; $("#clock-button").disabled = true; showNetwork("checking", "Verificando a rede…"); showDevice("checking", "Verificando este aparelho…", "Nenhum PIN ou dado pessoal do telefone é lido.");
+  const response = await authenticatedFetch("/hotspot/device"); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Não foi possível validar o acesso."); state.hotspotConfigured = Boolean(data.network?.configured); state.hotspotVerified = Boolean(data.network?.verified);
+  if (!state.hotspotVerified) { showNetwork("blocked", state.hotspotConfigured ? "Conecte-se à rede Capannone Hotspot" : "Relógio aguardando configuração do Hotspot"); showDevice("blocked", "Aguardando a rede autorizada", "O aparelho só pode ser cadastrado ou usado dentro da Capannone."); return; }
+  showNetwork("ok", "Conectado à rede Capannone Hotspot"); let local = await storedDevice(auth.currentUser.uid);
+  if (!data.device) { showDevice("checking", "Cadastrando este aparelho…", "Este procedimento acontece somente no primeiro acesso."); const enrolled = await enrollCurrentDevice(); local = await storedDevice(auth.currentUser.uid); data.device = enrolled; }
+  if (!local || local.deviceId !== data.device.deviceId || !local.privateKey) { showDevice("blocked", "Conta vinculada a outro aparelho", "Peça à Magna para liberar a troca de celular."); return; }
+  state.deviceReady = true; showDevice("ok", "Aparelho reconhecido", `Cadastro seguro confirmado em ${dateLabel(data.device.enrolledAt, true)}.`); $("#clock-button").disabled = false;
+}
+
+async function prepareDeviceBinding() {
+  if (!auth.currentUser || state.profile?.role !== "employee") return;
+  if (state.deviceSetupPromise) return state.deviceSetupPromise;
+  state.deviceSetupPromise = runDeviceBinding().catch((error) => { state.deviceReady = false; $("#clock-button").disabled = true; showNetwork("blocked", "Não foi possível concluir a verificação"); showDevice("blocked", "Aparelho não confirmado", friendlyError(error)); }).finally(() => { state.deviceSetupPromise = null; }); return state.deviceSetupPromise;
+}
+
+const checkHotspot = prepareDeviceBinding;
 
 async function loadTimeEntries() {
   try { const response = await authenticatedFetch("/hotspot/entries?mine=1"); if (!response.ok) throw new Error(); const data = await response.json(); state.timeEntries = Array.isArray(data.items) ? data.items : []; } catch (_) { state.timeEntries = []; }
@@ -78,9 +123,9 @@ async function loadTimeEntries() {
 function renderTimeEntries() { const holder = $("#my-time-entries"); if (!holder) return; if (!state.timeEntries.length) return holder.replaceChildren(el("p", "compact-empty", "Nenhum ponto registrado.")); holder.replaceChildren(...state.timeEntries.slice(0, 30).map((item) => { const row = el("div", "compact-row"); const copy = el("div"); copy.append(el("strong", "", item.type === "entrada" ? "Entrada" : "Saída"), el("small", "", dateLabel(item.timestamp, true))); row.append(copy, el("span", "badge active", "Hotspot confirmado")); return row; })); }
 
 async function handleClock(event) {
-  event.preventDefault(); if (!state.hotspotVerified) return setMessage("#clock-message", "Conecte-se à rede Capannone Hotspot.", "error"); const submit = event.submitter; submit.disabled = true; setMessage("#clock-message", "Confirmando PIN e rede…");
-  try { const response = await authenticatedFetch("/hotspot/clock", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin: $("#phone-pin").value }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Não foi possível registrar o ponto."); $("#phone-pin").value = ""; state.timeEntries.unshift(data.entry); renderTimeEntries(); renderHome(); setMessage("#clock-message", `${data.entry.type === "entrada" ? "Entrada" : "Saída"} registrada às ${new Date(data.entry.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}.`, "success"); toast("Ponto registrado com a rede e o PIN confirmados."); }
-  catch (error) { setMessage("#clock-message", friendlyError(error), "error"); } finally { submit.disabled = !state.hotspotVerified; }
+  event.preventDefault(); await prepareDeviceBinding(); if (!state.hotspotVerified || !state.deviceReady) return setMessage("#clock-message", "A rede e este aparelho precisam estar reconhecidos.", "error"); const submit = event.submitter; submit.disabled = true; setMessage("#clock-message", "Confirmando rede e aparelho…");
+  try { const local = await storedDevice(auth.currentUser.uid); if (!local?.privateKey) throw new Error("A identificação deste aparelho não foi encontrada."); const proof = await signedChallenge("clock", local.privateKey); const response = await authenticatedFetch("/hotspot/clock", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(proof) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Não foi possível registrar o ponto."); state.timeEntries.unshift(data.entry); renderTimeEntries(); renderHome(); setMessage("#clock-message", `${data.entry.type === "entrada" ? "Entrada" : "Saída"} registrada às ${new Date(data.entry.timestamp).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}.`, "success"); toast("Ponto registrado com a rede e o aparelho confirmados."); }
+  catch (error) { setMessage("#clock-message", friendlyError(error), "error"); } finally { submit.disabled = !state.deviceReady; }
 }
 
 function renderMessages() { const holder = $("#chat-messages"); if (!state.messages.length) return holder.replaceChildren(el("p", "compact-empty", "Nenhum recado enviado.")); holder.replaceChildren(...state.messages.map((item) => { const message = el("article", `chat-message${item.senderUid === auth.currentUser?.uid ? " mine" : ""}`); message.append(el("strong", "", item.senderName || item.senderEmail || "Equipe"), el("p", "", item.text), el("time", "", dateLabel(item.createdAt, true))); return message; })); holder.scrollTop = holder.scrollHeight; }

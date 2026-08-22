@@ -9,7 +9,7 @@
 <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="/css/site.css?v=20260808-2">
 <link rel="stylesheet" href="/css/admin-overrides.css?v=20260809-1">
-<link rel="stylesheet" href="/css/internal.css?v=20260822-3">
+<link rel="stylesheet" href="/css/internal.css?v=20260822-4">
 </head>
 <body class="admin-v2-page internal-page">
 <a class="skip-link" href="#internal-content">Pular para o conteúdo</a>
@@ -114,7 +114,7 @@
         <div class="view-heading"><div><p class="eyebrow">ESCALAS E PONTO</p><h1>Calendário da equipe.</h1><p>Organize os dias de trabalho e acompanhe os registros feitos no Hotspot.</p></div></div>
         <div class="two-column-layout internal-two-column">
           <form class="admin-panel-card" id="shift-form"><h2>Adicionar dia de trabalho</h2><div class="field"><label for="shift-employee">Funcionário</label><select id="shift-employee" required></select></div><div class="field"><label for="shift-date">Data</label><input id="shift-date" type="date" required></div><div class="form-grid"><div class="field"><label for="shift-start">Entrada prevista</label><input id="shift-start" type="time" required></div><div class="field"><label for="shift-end">Saída prevista</label><input id="shift-end" type="time" required></div></div><div class="field"><label for="shift-note">Observação</label><input id="shift-note" maxlength="240"></div><button class="button button-dark full" type="submit">Salvar na escala</button><p class="form-message" id="shift-message" role="status"></p></form>
-          <div><div class="admin-list" id="shift-list"></div><section class="admin-panel-card time-summary-card"><h2>Registros no Hotspot</h2><p id="hotspot-summary">A integração de rede será confirmada antes de liberar o relógio de ponto.</p><div class="compact-list" id="time-entry-list"></div></section></div>
+          <div><div class="admin-list" id="shift-list"></div><section class="admin-panel-card time-summary-card"><h2>Registros no Hotspot</h2><p id="hotspot-summary">A integração de rede será confirmada antes de liberar o relógio de ponto.</p><div class="hotspot-setup magna-only"><p>Conectada ao Wi‑Fi da pizzaria? Reconheça esta conexão para liberar o ponto somente dentro da Capannone.</p><button class="small-action" id="authorize-hotspot-network" type="button">Reconhecer esta rede</button></div><div class="compact-list" id="time-entry-list"></div></section></div>
         </div>
       </section>
 
@@ -131,7 +131,7 @@
   <form id="employee-form"><input id="employee-id" type="hidden"><p class="eyebrow">PESSOAL</p><h2 id="employee-dialog-title">Cadastrar funcionário</h2><div class="form-grid">
     <div class="field"><label for="employee-name">Nome</label><input id="employee-name" maxlength="100" required></div><div class="field"><label for="employee-role">Função</label><input id="employee-role" maxlength="100" required></div>
     <div class="field full-field new-employee-only"><label for="employee-email">E-mail de acesso</label><input id="employee-email" type="email" autocomplete="off" required></div>
-    <div class="field new-employee-only"><label for="employee-temp-password">Senha provisória</label><input id="employee-temp-password" type="password" autocomplete="new-password" minlength="6" required><small>Digite a senha provisória combinada e entregue-a diretamente ao funcionário.</small></div><div class="field new-employee-only"><label for="employee-pin">PIN do telefone</label><input id="employee-pin" type="password" inputmode="numeric" pattern="[0-9]{4,6}" minlength="4" maxlength="6" required></div>
+    <div class="field full-field new-employee-only"><label for="employee-temp-password">Senha provisória</label><input id="employee-temp-password" type="password" autocomplete="new-password" minlength="6" required><small>Entregue esta senha diretamente ao funcionário. O primeiro celular será reconhecido automaticamente dentro da rede Capannone.</small></div>
     <div class="field"><label for="employee-pay-amount">Valor combinado</label><input id="employee-pay-amount" type="number" min="0" step="0.01"></div><div class="field"><label for="employee-pay-frequency">Periodicidade</label><select id="employee-pay-frequency"><option value="monthly">Mensal</option><option value="weekly">Semanal</option><option value="daily">Por dia</option><option value="other">Outro</option></select></div>
     <div class="field"><label for="employee-pay-day">Dia de receber</label><input id="employee-pay-day" type="number" min="1" max="31"></div><div class="field"><label for="employee-payment-status">Pagamento atual</label><select id="employee-payment-status"><option value="pending">Pendente</option><option value="paid">Pago</option></select></div>
     <div class="field"><label for="employee-vacation-start">Início das férias</label><input id="employee-vacation-start" type="date"></div><div class="field"><label for="employee-vacation-end">Fim das férias</label><input id="employee-vacation-end" type="date"></div>
@@ -161,12 +161,18 @@
   <form method="dialog" class="dialog-close-row"><button aria-label="Fechar" value="cancel">✕</button></form>
   <form id="recipe-form"><input id="recipe-id" type="hidden"><p class="eyebrow">CADERNO</p><h2>Receita da Capannone</h2><div class="form-grid">
     <div class="field"><label for="recipe-name">Nome</label><input id="recipe-name" maxlength="140" required></div><div class="field"><label for="recipe-category">Categoria</label><select id="recipe-category"><option value="recheios">Recheios</option><option value="molhos">Molhos</option><option value="massas">Massas</option><option value="pizzas">Pizzas</option><option value="bebidas">Bebidas</option><option value="doces">Doces</option><option value="preparos">Preparos</option><option value="outros">Outros</option></select></div>
-    <div class="field full-field"><label for="recipe-yield">Rendimento / tamanhos</label><input id="recipe-yield" maxlength="200"></div><div class="field full-field"><label for="recipe-ingredients">Ingredientes</label><textarea id="recipe-ingredients" rows="9" maxlength="8000" placeholder="Um ingrediente por linha" required></textarea></div><div class="field full-field"><label for="recipe-instructions">Modo de preparo</label><textarea id="recipe-instructions" rows="9" maxlength="10000"></textarea></div><div class="field full-field"><label for="recipe-notes">Observações</label><textarea id="recipe-notes" rows="4" maxlength="3000"></textarea></div>
+    <div class="field full-field"><label for="recipe-yield">Rendimento / tamanhos</label><input id="recipe-yield" maxlength="200"></div>
+    <section class="field full-field recipe-sheet-field" aria-labelledby="recipe-sheet-title">
+      <div class="recipe-sheet-heading"><div><span class="recipe-sheet-kicker">EDIÇÃO EM PLANILHA</span><h3 id="recipe-sheet-title">Ingredientes e quantidades</h3><small id="recipe-sheet-help">Preencha uma linha para cada ingrediente.</small></div><button class="small-action recipe-add-row" id="add-recipe-row" type="button">+ Adicionar linha</button></div>
+      <div class="recipe-sheet-scroll"><table class="recipe-editor-table"><thead id="recipe-editor-head"></thead><tbody id="recipe-editor-body"></tbody></table></div>
+      <input id="recipe-ingredients" type="hidden">
+    </section>
+    <div class="field full-field"><label for="recipe-instructions">Modo de preparo</label><textarea id="recipe-instructions" rows="9" maxlength="10000"></textarea></div><div class="field full-field"><label for="recipe-notes">Observações</label><textarea id="recipe-notes" rows="4" maxlength="3000"></textarea></div>
   </div><div class="dialog-actions"><button class="button" type="button" data-close-dialog="recipe-dialog">Cancelar</button><button class="button button-dark" type="submit">Salvar receita</button></div><p class="form-message" id="recipe-message" role="status"></p></form>
 </dialog>
 
 <section id="print-area" class="print-area" aria-hidden="true"></section>
 <noscript><p class="noscript">Ative o JavaScript para usar a gestão interna.</p></noscript>
-<script type="module" src="/js/magna.js?v=20260822-4"></script>
+<script type="module" src="/js/magna.js?v=20260822-5"></script>
 </body>
 </html>
