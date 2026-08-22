@@ -46,9 +46,28 @@ const state = {
   shifts: [],
   messages: [],
   timeEntries: [],
+  selectedInventory: new Set(),
+  selectedRecipes: new Set(),
   activeView: "dashboard",
   toastTimer: null
 };
+
+const inventoryCategories = [
+  "Carnes e embutidos",
+  "Laticínios e frios",
+  "Farinhas, massas e panificação",
+  "Hortifrúti",
+  "Molhos, conservas e temperos",
+  "Óleos, grãos e insumos secos",
+  "Bebidas não alcoólicas",
+  "Cervejas, vinhos e destilados",
+  "Doces e sobremesas",
+  "Congelados e pré-preparos",
+  "Descartáveis e embalagens",
+  "Limpeza e higiene",
+  "Equipamentos e utensílios",
+  "Outros"
+];
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -168,10 +187,12 @@ async function loadAllData() {
   state.payments = payments.sort((a, b) => clean(a.dueDate).localeCompare(clean(b.dueDate)));
   state.inventory = inventory.sort((a, b) => clean(a.name).localeCompare(clean(b.name), "pt-BR"));
   state.recipes = recipes.sort((a, b) => clean(a.name).localeCompare(clean(b.name), "pt-BR"));
+  state.selectedInventory = new Set([...state.selectedInventory].filter((id) => state.inventory.some((item) => item.id === id)));
+  state.selectedRecipes = new Set([...state.selectedRecipes].filter((id) => state.recipes.some((item) => item.id === id && item.active !== false)));
   state.versions = versions.sort((a, b) => clean(b.versionedAt).localeCompare(clean(a.versionedAt)));
   state.shifts = shifts.sort((a, b) => clean(a.date).localeCompare(clean(b.date)) || clean(a.startTime).localeCompare(clean(b.startTime)));
   state.messages = messages;
-  fillEmployeeOptions();
+  fillEmployeeOptions(); fillInventoryCategoryOptions();
   renderDashboard(); renderEmployees(); renderPayments(); renderInventory(); renderRecipes(); renderShifts(); renderMessages();
   await loadTimeEntries();
 }
@@ -251,16 +272,31 @@ function renderPayments() {
 }
 
 function filteredInventory() {
-  const search = clean($("#inventory-search").value).toLocaleLowerCase("pt-BR"); const supplier = $("#inventory-supplier-filter").value; const lowOnly = $("#inventory-low-filter").checked;
-  return state.inventory.filter((item) => (!search || `${item.name} ${item.category}`.toLocaleLowerCase("pt-BR").includes(search)) && (!supplier || item.supplier === supplier) && (!lowOnly || num(item.currentQuantity) <= num(item.minimumQuantity)));
+  const search = clean($("#inventory-search").value).toLocaleLowerCase("pt-BR"); const category = $("#inventory-category-filter").value; const supplier = $("#inventory-supplier-filter").value; const lowOnly = $("#inventory-low-filter").checked;
+  return state.inventory.filter((item) => (!search || `${item.name} ${item.category}`.toLocaleLowerCase("pt-BR").includes(search)) && (!category || item.category === category) && (!supplier || item.supplier === supplier) && (!lowOnly || num(item.currentQuantity) <= num(item.minimumQuantity)));
+}
+
+function fillInventoryCategoryOptions() {
+  const filter = $("#inventory-category-filter"); const editor = $("#inventory-category"); const filterValue = filter.value; const editorValue = editor.value;
+  const existing = state.inventory.map((item) => clean(item.category, 80)).filter(Boolean);
+  const categories = [...new Set([...inventoryCategories, ...existing])].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  filter.replaceChildren(); const all = el("option", "", "Todas as categorias"); all.value = ""; filter.append(all);
+  editor.replaceChildren();
+  categories.forEach((category) => { const filterOption = el("option", "", category); filterOption.value = category; filter.append(filterOption); const editorOption = el("option", "", category); editorOption.value = category; editor.append(editorOption); });
+  if (categories.includes(filterValue)) filter.value = filterValue;
+  editor.value = categories.includes(editorValue) ? editorValue : "Outros";
+}
+
+function updateInventorySelectionSummary() {
+  const count = state.selectedInventory.size; $("#inventory-selection-count").textContent = `${count} ${count === 1 ? "produto selecionado" : "produtos selecionados"}`; $("#print-shopping-list").disabled = count === 0;
 }
 
 function renderInventory() {
-  const holder = $("#inventory-list"); const items = filteredInventory();
+  const holder = $("#inventory-list"); const items = filteredInventory(); updateInventorySelectionSummary();
   if (!items.length) return holder.replaceChildren(empty("Nenhum item de estoque encontrado."));
   holder.replaceChildren(...items.map((item) => {
     const low = num(item.currentQuantity) <= num(item.minimumQuantity); const card = el("article", "list-card inventory-card");
-    const main = el("div", "inventory-card-main"); main.append(el("h3", "", item.name), el("p", "", `${item.category || "Outros"} · ${item.supplier || "Não definido"}`));
+    const main = el("div", "inventory-card-main"); const title = el("div", "selectable-card-heading"); const selector = el("label", "item-selector"); const checkbox = el("input"); checkbox.type = "checkbox"; checkbox.className = "inventory-select"; checkbox.dataset.id = item.id; checkbox.checked = state.selectedInventory.has(item.id); checkbox.setAttribute("aria-label", `Selecionar ${item.name} para impressão`); selector.append(checkbox); title.append(selector, el("h3", "", item.name)); main.append(title, el("p", "", `${item.category || "Outros"} · ${item.supplier || "Não definido"}`));
     const tags = el("div", "inventory-tags"); tags.append(badge(`Mínimo: ${num(item.minimumQuantity)} ${item.unit || "un"}`)); if (item.buyQuantity) tags.append(badge(`Comprar: ${num(item.buyQuantity)} ${item.unit || "un"}`, "warning")); main.append(tags);
     const side = el("div"); const indicator = el("div", `stock-indicator${low ? " low" : ""}`); indicator.append(el("strong", "", String(num(item.currentQuantity))), el("span", "", `${item.unit || "un"} · ${low ? "COMPRAR" : "OK"}`));
     const actions = el("div", "inventory-actions"); actions.append(button("Editar", "edit-inventory", item.id), button("Excluir", "delete-inventory", item.id, "small-action danger")); side.append(indicator, actions); card.append(main, side); return card;
@@ -275,10 +311,10 @@ function filteredRecipes() {
 }
 
 function renderRecipes() {
-  const holder = $("#recipe-list"); const items = filteredRecipes();
+  const holder = $("#recipe-list"); const items = filteredRecipes(); updateRecipeSelectionSummary();
   if (!items.length) return holder.replaceChildren(empty("Nenhuma receita encontrada."));
   holder.replaceChildren(...items.map((item) => {
-    const card = el("article", "recipe-card"); card.append(el("span", "recipe-category", recipeCategoryLabels[item.category] || "Outros"), el("h2", "", item.name));
+    const card = el("article", "recipe-card"); const title = el("div", "selectable-card-heading"); const selector = el("label", "item-selector"); const checkbox = el("input"); checkbox.type = "checkbox"; checkbox.className = "recipe-select"; checkbox.dataset.id = item.id; checkbox.checked = state.selectedRecipes.has(item.id); checkbox.setAttribute("aria-label", `Selecionar a receita ${item.name} para impressão`); selector.append(checkbox); const heading = el("div"); heading.append(el("span", "recipe-category", recipeCategoryLabels[item.category] || "Outros"), el("h2", "", item.name)); title.append(selector, heading); card.append(title);
     if (item.yield) card.append(el("p", "recipe-meta", item.yield));
     card.append(el("p", "recipe-preview", item.ingredients || "Ingredientes ainda não informados."));
     const actions = el("div", "recipe-actions"); actions.append(button("Editar", "edit-recipe", item.id), button("Imprimir / PDF", "print-recipe", item.id)); card.append(actions);
@@ -289,6 +325,10 @@ function renderRecipes() {
     else versions.forEach((version) => { const row = el("div", "version-item"); row.append(el("strong", "", version.snapshot?.name || item.name), el("span", "", `${dateLabel(version.versionedAt, true)} · por ${version.versionedByName || "usuário autorizado"}`)); list.append(row); });
     details.append(list); card.append(details); return card;
   }));
+}
+
+function updateRecipeSelectionSummary() {
+  const count = state.selectedRecipes.size; $("#recipe-selection-count").textContent = `${count} ${count === 1 ? "receita selecionada" : "receitas selecionadas"}`; $("#print-selected-recipes").disabled = count === 0;
 }
 
 function fillEmployeeOptions() {
@@ -345,7 +385,7 @@ function openPayment(item = null) {
 }
 
 function openInventory(item = null) {
-  $("#inventory-form").reset(); setMessage("#inventory-message"); $("#inventory-id").value = item?.id || ""; $("#inventory-supplier").value = "Não definido";
+  $("#inventory-form").reset(); setMessage("#inventory-message"); $("#inventory-id").value = item?.id || ""; $("#inventory-category").value = "Outros"; $("#inventory-supplier").value = "Não definido";
   if (item) { $("#inventory-name").value = item.name || ""; $("#inventory-category").value = item.category || "Outros"; $("#inventory-supplier").value = item.supplier || "Não definido"; $("#inventory-current").value = item.currentQuantity ?? ""; $("#inventory-minimum").value = item.minimumQuantity ?? ""; $("#inventory-unit").value = item.unit || ""; $("#inventory-buy-quantity").value = item.buyQuantity ?? ""; $("#inventory-notes").value = item.notes || ""; }
   $("#inventory-dialog").showModal();
 }
@@ -411,14 +451,14 @@ async function handlePaymentAction(control) {
 async function handleInventorySave(event) {
   event.preventDefault(); const id = $("#inventory-id").value; const submit = event.submitter; submit.disabled = true;
   const record = { name: clean($("#inventory-name").value, 120), category: clean($("#inventory-category").value, 80), supplier: clean($("#inventory-supplier").value, 100) || "Não definido", currentQuantity: num($("#inventory-current").value), minimumQuantity: num($("#inventory-minimum").value), unit: clean($("#inventory-unit").value, 30) || "un", buyQuantity: num($("#inventory-buy-quantity").value), notes: clean($("#inventory-notes").value, 600), updatedAt: nowIso(), updatedBy: auth.currentUser.uid };
-  try { if (id) { await updateDoc(doc(db, "inventoryItems", id), record); Object.assign(state.inventory.find((item) => item.id === id), record); } else { const created = await addDoc(collection(db, "inventoryItems"), { ...record, createdAt: nowIso(), createdBy: auth.currentUser.uid }); state.inventory.push({ id: created.id, ...record }); } state.inventory.sort((a, b) => clean(a.name).localeCompare(clean(b.name), "pt-BR")); $("#inventory-dialog").close(); renderInventory(); renderDashboard(); toast("Estoque atualizado."); }
+  try { if (id) { await updateDoc(doc(db, "inventoryItems", id), record); Object.assign(state.inventory.find((item) => item.id === id), record); } else { const created = await addDoc(collection(db, "inventoryItems"), { ...record, createdAt: nowIso(), createdBy: auth.currentUser.uid }); state.inventory.push({ id: created.id, ...record }); } state.inventory.sort((a, b) => clean(a.name).localeCompare(clean(b.name), "pt-BR")); $("#inventory-dialog").close(); fillInventoryCategoryOptions(); renderInventory(); renderDashboard(); toast("Estoque atualizado."); }
   catch (error) { setMessage("#inventory-message", friendlyError(error), "error"); } finally { submit.disabled = false; }
 }
 
 async function handleInventoryAction(control) {
   const item = state.inventory.find((candidate) => candidate.id === control.dataset.id); if (!item) return;
   if (control.dataset.action === "edit-inventory") return openInventory(item);
-  if (control.dataset.action === "delete-inventory") { if (!confirm(`Excluir “${item.name}” do estoque?`)) return; await deleteDoc(doc(db, "inventoryItems", item.id)); state.inventory = state.inventory.filter((candidate) => candidate.id !== item.id); renderInventory(); renderDashboard(); toast("Item excluído."); }
+  if (control.dataset.action === "delete-inventory") { if (!confirm(`Excluir “${item.name}” do estoque?`)) return; await deleteDoc(doc(db, "inventoryItems", item.id)); state.inventory = state.inventory.filter((candidate) => candidate.id !== item.id); state.selectedInventory.delete(item.id); fillInventoryCategoryOptions(); renderInventory(); renderDashboard(); toast("Item excluído."); }
 }
 
 async function handleRecipeSave(event) {
@@ -431,16 +471,59 @@ async function handleRecipeSave(event) {
   } catch (error) { setMessage("#recipe-message", friendlyError(error), "error"); } finally { submit.disabled = false; }
 }
 
+function ingredientParts(line) {
+  const chunks = clean(line, 1000).split(/\s+[—–]\s+|\s+-\s+/); const name = clean(chunks.shift(), 300); const detail = clean(chunks.join(" — "), 700); const sizes = { M: "", G: "", GG: "" };
+  detail.split("|").forEach((part) => { const match = clean(part).match(/^(GG|G|M)\s*:\s*(.+)$/i); if (match) sizes[match[1].toUpperCase()] = clean(match[2], 200); });
+  return { name: name || clean(line, 1000), detail, sizes, hasSizes: Boolean(sizes.M || sizes.G || sizes.GG) };
+}
+
+function buildIngredientTable(item, compact = false) {
+  const rows = clean(item.ingredients, 8000).split(/\r?\n/).map(ingredientParts).filter((part) => part.name); const hasSizes = rows.some((part) => part.hasSizes); const table = el("table", `recipe-print-table${compact ? " compact" : ""}`); const thead = el("thead"); const heading = el("tr");
+  (hasSizes ? ["Ingrediente", "M", "G", "GG"] : ["Ingrediente", "Quantidade / observação"]).forEach((label) => heading.append(el("th", "", label))); thead.append(heading); table.append(thead); const tbody = el("tbody");
+  if (!rows.length) { const row = el("tr"); const cell = el("td", "", "Ingredientes ainda não informados."); cell.colSpan = hasSizes ? 4 : 2; row.append(cell); tbody.append(row); }
+  rows.forEach((part) => { const row = el("tr"); const values = hasSizes ? [part.name, part.sizes.M || (!part.hasSizes ? part.detail : ""), part.sizes.G, part.sizes.GG] : [part.name, part.detail]; values.forEach((value) => row.append(el("td", "", value || "—"))); tbody.append(row); });
+  table.append(tbody); return table;
+}
+
+function appendRecipeDetails(container, item, compact = false) {
+  if (item.instructions) { container.append(el("h3", "print-section-title", "Modo de preparo"), el("p", `print-pre-line${compact ? " compact" : ""}`, item.instructions)); }
+  if (item.notes) { container.append(el("h3", "print-section-title", "Observações"), el("p", `print-pre-line${compact ? " compact" : ""}`, item.notes)); }
+}
+
+function buildRecipeSheet(item) {
+  const sheet = el("article", "print-sheet print-recipe-page"); sheet.append(el("p", "print-kicker", `Receitas Capannone · ${recipeCategoryLabels[item.category] || "Outros"}`), el("h1", "", item.name)); if (item.yield) sheet.append(el("p", "print-meta", item.yield)); sheet.append(el("h2", "", "Ingredientes"), buildIngredientTable(item)); appendRecipeDetails(sheet, item); sheet.append(el("p", "print-footer", `Versão atualizada em ${dateLabel(item.updatedAt, true)} · Uso interno Capannone`)); return sheet;
+}
+
+function buildFillingPage(items) {
+  const sheet = el("article", "print-sheet filling-print-page"); sheet.append(el("p", "print-kicker", "Receitas Capannone · Quadro da cozinha"), el("h1", "", "Recheios")); const grid = el("div", "filling-print-grid"); grid.dataset.count = String(items.length);
+  items.forEach((item) => { const card = el("section", "filling-print-card"); card.append(el("h2", "", item.name)); if (item.yield) card.append(el("p", "print-meta", item.yield)); card.append(buildIngredientTable(item, true)); appendRecipeDetails(card, item, true); grid.append(card); });
+  sheet.append(grid, el("p", "print-footer", `Gerado em ${dateLabel(nowIso(), true)} · Uso interno Capannone`)); return sheet;
+}
+
+function startPrint(nodes, mode = "") {
+  const area = $("#print-area"); area.replaceChildren(...nodes); area.setAttribute("aria-hidden", "false"); document.body.classList.add("printing"); if (mode) document.body.classList.add(mode); window.print();
+}
+
+function printRecipes(items) {
+  if (!items.length) return toast("Selecione pelo menos uma receita para imprimir.", "error"); const fillings = items.filter((item) => item.category === "recheios"); const others = items.filter((item) => item.category !== "recheios"); const sheets = []; const fillingPages = [];
+  fillings.forEach((item) => { const ingredientLines = clean(item.ingredients, 8000).split(/\r?\n/).filter(Boolean).length; const textLines = Math.ceil((clean(item.instructions, 10000).length + clean(item.notes, 3000).length) / 90); const weight = Math.max(8, ingredientLines + textLines + 5); const current = fillingPages.at(-1); const currentWeight = current?.reduce((total, entry) => total + entry.weight, 0) || 0; if (!current || current.length >= 4 || currentWeight + weight > 42) fillingPages.push([{ item, weight }]); else current.push({ item, weight }); });
+  fillingPages.forEach((page) => sheets.push(buildFillingPage(page.map((entry) => entry.item)));
+  others.forEach((item) => sheets.push(buildRecipeSheet(item))); startPrint(sheets, fillings.length ? "printing-recipes" : "");
+}
+
 function printRecipe(item) {
-  const sheet = el("article", "print-sheet"); sheet.append(el("p", "print-kicker", `Receitas Capannone · ${recipeCategoryLabels[item.category] || "Outros"}`), el("h1", "", item.name)); if (item.yield) sheet.append(el("p", "print-meta", item.yield));
-  sheet.append(el("h2", "", "Ingredientes")); const ingredients = el("ul"); clean(item.ingredients, 8000).split(/\r?\n/).filter(Boolean).forEach((line) => ingredients.append(el("li", "", line))); sheet.append(ingredients);
-  if (item.instructions) { sheet.append(el("h2", "", "Modo de preparo")); clean(item.instructions, 10000).split(/\r?\n/).filter(Boolean).forEach((line) => sheet.append(el("p", "", line))); }
-  if (item.notes) { sheet.append(el("h2", "", "Observações"), el("p", "", item.notes)); }
-  sheet.append(el("p", "print-footer", `Versão atualizada em ${dateLabel(item.updatedAt, true)} · Uso interno Capannone`)); const area = $("#print-area"); area.replaceChildren(sheet); area.setAttribute("aria-hidden", "false"); document.body.classList.add("printing"); window.print();
+  printRecipes([item]);
+}
+
+function printSelectedRecipes() {
+  const items = state.recipes.filter((item) => state.selectedRecipes.has(item.id) && item.active !== false); printRecipes(items);
 }
 
 function printShoppingList() {
-  const items = filteredInventory().filter((item) => num(item.currentQuantity) <= num(item.minimumQuantity)); const sheet = el("article", "print-sheet print-shopping"); sheet.append(el("p", "print-kicker", "Estoque Capannone"), el("h1", "", "Lista de compras"), el("p", "print-meta", `Gerada em ${dateLabel(nowIso(), true)} · ${$("#inventory-supplier-filter").value || "Todos os fornecedores"}`)); const table = el("table"); const head = el("tr"); ["Item", "Fornecedor", "Estoque", "Comprar"].forEach((label) => head.append(el("th", "", label))); const thead = el("thead"); thead.append(head); table.append(thead); const body = el("tbody"); items.forEach((item) => { const row = el("tr"); [item.name, item.supplier || "Não definido", `${num(item.currentQuantity)} ${item.unit || "un"}`, `${num(item.buyQuantity)} ${item.unit || "un"}`].forEach((value) => row.append(el("td", "", value))); body.append(row); }); table.append(body); sheet.append(table, el("p", "print-footer", "Lista organizacional interna · conferir quantidades antes da compra")); const area = $("#print-area"); area.replaceChildren(sheet); area.setAttribute("aria-hidden", "false"); document.body.classList.add("printing"); window.print();
+  const items = state.inventory.filter((item) => state.selectedInventory.has(item.id)).sort((a, b) => clean(a.category).localeCompare(clean(b.category), "pt-BR") || clean(a.name).localeCompare(clean(b.name), "pt-BR"));
+  if (!items.length) return toast("Selecione pelo menos um produto para imprimir.", "error");
+  const sheet = el("article", "print-sheet print-shopping"); sheet.append(el("p", "print-kicker", "Estoque Capannone"), el("h1", "", "Lista de compras"), el("p", "print-meta", `Gerada em ${dateLabel(nowIso(), true)} · ${items.length} ${items.length === 1 ? "produto" : "produtos"}`)); const table = el("table"); const head = el("tr"); ["OK", "Produto", "Categoria", "Fornecedor", "Estoque atual", "Comprar", "Observações"].forEach((label) => head.append(el("th", "", label))); const thead = el("thead"); thead.append(head); table.append(thead); const body = el("tbody");
+  items.forEach((item) => { const row = el("tr"); const unit = item.unit || "un"; const values = ["", item.name, item.category || "Outros", item.supplier || "Não definido", `${num(item.currentQuantity)} ${unit}`, num(item.buyQuantity) ? `${num(item.buyQuantity)} ${unit}` : "—", item.notes || ""]; values.forEach((value, index) => { const cell = el("td", index === 0 ? "print-check-cell" : "", value); row.append(cell); }); body.append(row); }); table.append(body); sheet.append(table, el("p", "print-footer", "Lista organizacional interna · conferir quantidades antes da compra")); startPrint([sheet], "printing-shopping");
 }
 
 async function handleRecipeAction(control) {
@@ -482,8 +565,12 @@ function wireUi() {
   $("#new-employee-button").addEventListener("click", () => openEmployee()); $("#new-payment-button").addEventListener("click", () => openPayment()); $("#new-inventory-button").addEventListener("click", () => openInventory()); $("#new-recipe-button").addEventListener("click", () => openRecipe());
   $("#employee-form").addEventListener("submit", handleEmployeeSave); $("#payment-form").addEventListener("submit", handlePaymentSave); $("#inventory-form").addEventListener("submit", handleInventorySave); $("#recipe-form").addEventListener("submit", handleRecipeSave); $("#shift-form").addEventListener("submit", handleShiftSave); $("#chat-form").addEventListener("submit", handleChatSave);
   $("#employee-list").addEventListener("click", (event) => { const control = event.target.closest("button[data-action]"); if (control) handleEmployeeAction(control).catch((error) => toast(friendlyError(error), "error")); }); $("#payment-list").addEventListener("click", (event) => { const control = event.target.closest("button[data-action]"); if (control) handlePaymentAction(control).catch((error) => toast(friendlyError(error), "error")); }); $("#inventory-list").addEventListener("click", (event) => { const control = event.target.closest("button[data-action]"); if (control) handleInventoryAction(control).catch((error) => toast(friendlyError(error), "error")); }); $("#recipe-list").addEventListener("click", (event) => { const control = event.target.closest("button[data-action]"); if (control) handleRecipeAction(control).catch((error) => toast(friendlyError(error), "error")); }); $("#shift-list").addEventListener("click", (event) => { const control = event.target.closest("button[data-action]"); if (control) handleShiftAction(control).catch((error) => toast(friendlyError(error), "error")); });
-  ["#payment-status-filter", "#payment-search"].forEach((selector) => $(selector).addEventListener(selector.includes("status") ? "change" : "input", renderPayments)); ["#inventory-search", "#inventory-supplier-filter", "#inventory-low-filter"].forEach((selector) => $(selector).addEventListener(selector.includes("search") ? "input" : "change", renderInventory)); ["#recipe-search", "#recipe-category-filter"].forEach((selector) => $(selector).addEventListener(selector.includes("search") ? "input" : "change", renderRecipes));
-  $("#print-shopping-list").addEventListener("click", printShoppingList); $$("[data-close-dialog]").forEach((control) => control.addEventListener("click", () => $(`#${control.dataset.closeDialog}`).close())); window.addEventListener("afterprint", () => { document.body.classList.remove("printing"); $("#print-area").setAttribute("aria-hidden", "true"); $("#print-area").replaceChildren(); });
+  $("#inventory-list").addEventListener("change", (event) => { const checkbox = event.target.closest(".inventory-select"); if (!checkbox) return; if (checkbox.checked) state.selectedInventory.add(checkbox.dataset.id); else state.selectedInventory.delete(checkbox.dataset.id); updateInventorySelectionSummary(); });
+  $("#recipe-list").addEventListener("change", (event) => { const checkbox = event.target.closest(".recipe-select"); if (!checkbox) return; if (checkbox.checked) state.selectedRecipes.add(checkbox.dataset.id); else state.selectedRecipes.delete(checkbox.dataset.id); updateRecipeSelectionSummary(); });
+  ["#payment-status-filter", "#payment-search"].forEach((selector) => $(selector).addEventListener(selector.includes("status") ? "change" : "input", renderPayments)); ["#inventory-search", "#inventory-category-filter", "#inventory-supplier-filter", "#inventory-low-filter"].forEach((selector) => $(selector).addEventListener(selector.includes("search") ? "input" : "change", renderInventory)); ["#recipe-search", "#recipe-category-filter"].forEach((selector) => $(selector).addEventListener(selector.includes("search") ? "input" : "change", renderRecipes));
+  $("#select-visible-inventory").addEventListener("click", () => { filteredInventory().forEach((item) => state.selectedInventory.add(item.id)); renderInventory(); }); $("#clear-inventory-selection").addEventListener("click", () => { state.selectedInventory.clear(); renderInventory(); });
+  $("#select-visible-recipes").addEventListener("click", () => { filteredRecipes().forEach((item) => state.selectedRecipes.add(item.id)); renderRecipes(); }); $("#clear-recipe-selection").addEventListener("click", () => { state.selectedRecipes.clear(); renderRecipes(); });
+  $("#print-shopping-list").addEventListener("click", printShoppingList); $("#print-selected-recipes").addEventListener("click", printSelectedRecipes); $$("[data-close-dialog]").forEach((control) => control.addEventListener("click", () => $(`#${control.dataset.closeDialog}`).close())); window.addEventListener("afterprint", () => { document.body.classList.remove("printing", "printing-recipes", "printing-shopping"); $("#print-area").setAttribute("aria-hidden", "true"); $("#print-area").replaceChildren(); });
 }
 
 wireUi();
